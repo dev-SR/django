@@ -1,4 +1,8 @@
-# Django
+# Django Fundamentals
+
+- [Django Fundamentals](#django-fundamentals)
+	- [Setup](#setup)
+	- [Django Project Structure](#django-project-structure)
 
 ## Setup
 
