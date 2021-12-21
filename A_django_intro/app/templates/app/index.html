@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block page_title %} APP {% endblock %}
+{% block content %}
+	{% include "app/includes/header.html" with active_page="index" %}
+<h1>List of Languages:</h1>
+<ul>
+	{% for language in languages %}
+		<li>
+			<a href="{% url 'others' language %}">{{ language }}</a>
+		</li>
+	{% endfor %}
+</ul>
+{% endblock %}

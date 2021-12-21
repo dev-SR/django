@@ -2,7 +2,9 @@
 
 - [Django Fundamentals](#django-fundamentals)
 	- [Setup](#setup)
-	- [Django Project Structure](#django-project-structure)
+	- [Django Project Structure: Urls and Views](#django-project-structure-urls-and-views)
+	- [Template Basics](#template-basics)
+		- [Templates: Inheritance](#templates-inheritance)
 
 ## Setup
 
@@ -24,8 +26,20 @@ python manage.py runserver
 python manage.py startapp <app_name>
 ```
 
-## Django Project Structure
+## Django Project Structure: Urls and Views
 
 <div align="center">
-<img src="img/intro.jpg" alt="intro.jpg" width="1000px">
+<img src="img/Django_intro.jpg" alt="intro.jpg" width="1000px">
+</div>
+
+## Template Basics
+
+<div align="center">
+<img src="img/Django_templates.jpg" alt="intro.jpg" width="1000px">
+</div>
+
+### Templates: Inheritance
+
+<div align="center">
+<img src="img/Django_templates_inheritance.jpg" alt="intro.jpg" width="1000px">
 </div>

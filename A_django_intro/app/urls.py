@@ -4,7 +4,7 @@ from . import views
 
 urlpatterns = [
     # route: /app/
-    path('', views.index),
+    path('', views.index, name='index'),
     # route: /app/others/<x>
-    path('others/<int:x>', views.dynamic),
+    path('others/<str:x>', views.dynamic, name='others'),
 ]

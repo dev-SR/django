@@ -3,8 +3,15 @@ from django.http import HttpResponse
 
 
 def index(request):
-    return HttpResponse("Hello, ~/app/")
+    context = {
+        'languages': ['Python', 'Java', 'C++', 'C#', 'JavaScript']
+    }
+
+    return render(request, 'app/index.html', context)
 
 
-def dynamic(reqest, x):
-    return HttpResponse("Hello, ~/app/others/{}".format(x))
+def dynamic(request, x):
+    context = {
+        'value': x
+    }
+    return render(request, 'app/dynamic.html', context)
