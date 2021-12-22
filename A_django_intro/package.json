@@ -1,0 +1,18 @@
+{
+	"name": "a_django_intro",
+	"version": "1.0.0",
+	"description": "- [Django Fundamentals](#django-fundamentals)\r   - [Setup](#setup)\r   - [Django Project Structure: Urls and Views](#django-project-structure-urls-and-views)\r   - [Template Basics](#template-basics)\r     - [Templates: Inheritance](#templates-inheritance)\r       - [extends – Django Template Tags](#extends--django-template-tags)\r       - [Including templates using include tag](#including-templates-using-include-tag)\r   - [Adding Statics Files](#adding-statics-files)\r     - [Adding App Level Statics Files](#adding-app-level-statics-files)\r     - [Adding Global Statics Files](#adding-global-statics-files)\r     - [Configuring Tailwind CSS](#configuring-tailwind-css)",
+	"main": "index.js",
+	"scripts": {
+		"theme:dev": "npx tailwindcss -i ./static/css/tailwind.css -o ./static/css/global.css --minify -w",
+		"theme:build": "NODE_ENV=production npx tailwindcss -i ./static/css/tailwind.css -o ./static/css/global.css --minify"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"devDependencies": {
+		"autoprefixer": "^10.4.0",
+		"postcss": "^8.4.5",
+		"tailwindcss": "^3.0.7"
+	}
+}

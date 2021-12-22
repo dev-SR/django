@@ -1,12 +1,16 @@
 # Django Fundamentals
 
 - [Django Fundamentals](#django-fundamentals)
-	- [Setup](#setup)
-	- [Django Project Structure: Urls and Views](#django-project-structure-urls-and-views)
-	- [Template Basics](#template-basics)
-		- [Templates: Inheritance](#templates-inheritance)
-			- [extends – Django Template Tags](#extends--django-template-tags)
-			- [Including templates using include tag](#including-templates-using-include-tag)
+  - [Setup](#setup)
+  - [Django Project Structure: Urls and Views](#django-project-structure-urls-and-views)
+  - [Template Basics](#template-basics)
+    - [Templates: Inheritance](#templates-inheritance)
+      - [extends – Django Template Tags](#extends--django-template-tags)
+      - [Including templates using include tag](#including-templates-using-include-tag)
+  - [Adding Statics Files](#adding-statics-files)
+    - [Adding App Level Statics Files](#adding-app-level-statics-files)
+    - [Adding Global Statics Files](#adding-global-statics-files)
+    - [Configuring Tailwind CSS](#configuring-tailwind-css)
 
 ## Setup
 
@@ -54,14 +58,13 @@ Also in `settings.py`, make sure the `TEMPLATES` object contains the following l
 ```python
 TEMPLATES = [
     {
-   	'..':""
+    '..':""
         'APP_DIRS': True,
     },
 ]
 ```
 
 In the `app` folder, open the `templates/app/index.html` page template file ), to observe that it contains one variable, {{ content }}:
-
 
 ```html
 <html>
@@ -87,6 +90,8 @@ def index(request):
 
 ### Templates: Inheritance
 
+Instead of rewriting the same code in every html file, Django allows us to create a base template which they will both inherit from. This prevents us from having to write a lot of repeated code in our templates when we need to modify anything that is shared.
+
 #### extends – Django Template Tags
 
 extends tag is used for inheritance of templates in django. One needs to repeat the same code again and again. Using extends we can inherit templates as well as variables.
@@ -94,6 +99,7 @@ extends tag is used for inheritance of templates in django. One needs to repeat 
 ```python
 {% extends 'template_name.html' %}
 ```
+
 Example: assume the following directory structure:
 
 ```bash
@@ -157,3 +163,118 @@ Say you want to include the contents of `nav.html` in the `datetime.html` file. 
 <div align="center">
 <img src="img/Django_templates_inheritance.jpg" alt="Django_templates_inheritance.jpg" width="1000px">
 </div>
+
+## Adding Statics Files
+
+Static files include stuff like CSS, JavaScript and images that you may want to serve alongside your site. Django is very opinionated about how you should include your static files. Open the `settings.py` file inside the inner django folder. At the very bottom of the file you should see these lines:
+
+```bash
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/4.0/howto/static-files/
+
+STATIC_URL = 'static/'
+```
+
+This line tells Django to append static to the base url (in our case localhost:8000) when searching for static files. In Django, you could have a static folder almost anywhere you want. You can even have more than one static folder e.g. one in each app or as Global Static folder in the root of our project folder..
+
+### Adding App Level Statics Files
+
+<div align="center">
+<img src="img/Django_static_file.jpg" alt="Django_static_file.jpg" width="1000px">
+</div>
+
+### Adding Global Statics Files
+
+Your project will probably also have static assets that aren’t tied to a particular app. In addition to using a `static/` directory inside your apps, you can define a list of directories (`STATICFILES_DIRS`) in your settings file where Django will also look for static files. For example:
+
+```python
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
+```
+
+<div align="center">
+<img src="img/Django_static_file_global.jpg" alt="Django_static_file_global.jpg" width="1000px">
+</div>
+
+We can also add static file to folder `css` by creating a folder named `css` in the `static` folder: `static/css/global.css`
+
+- It does not require any change in the `STATICFILES_DIRS` variable.
+
+```python
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+```
+
+- But we need to change import path in the `template/base.html` file to `{% static 'css/global.css' %}`
+
+```html
+{% load static %}
+<html lang="en">
+ <head>
+  <link rel="stylesheet" href="{% static 'css/global.css' %}">
+ </head>
+ <body>
+  {% block content %}{% endblock content %}
+ </body>
+</html>
+```
+
+### Configuring Tailwind CSS
+
+Install Tailwind CSS:
+
+```bash
+npm init -y
+npm install -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+```
+
+Add following line to `tailwind.config.js` file:
+
+```javascript
+module.exports = {
+ content: ['templates/**/*.html', './**/templates/**/*.html'],
+ darkMode: 'class', // or 'media' or 'class'
+ theme: {
+  extend: {}
+ },
+ variants: {
+  extend: {}
+ },
+ plugins: []
+};
+```
+
+Create  a input file `static/css/tailwind.css` and add the following code:
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+Also, create `static/css/global.css` for outputting global styles.
+
+Now, load in `template/base.html`
+
+```html
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <link rel="stylesheet" href="{% static 'css/global.css' %}">
+ </head>
+ <body>
+  {% block content %}{% endblock content %}
+ </body>
+</html>
+```
+
+```json
+ "scripts": {
+  "theme:dev": "npx tailwindcss -i ./static/css/tailwind.css -o ./static/css/global.css --minify -w",
+  "theme:build": "NODE_ENV=production npx tailwindcss -i ./static/css/tailwind.css -o ./static/css/global.css --minify"
+ },
+```
