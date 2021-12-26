@@ -2,6 +2,7 @@
 
 - [Django Fundamentals](#django-fundamentals)
   - [Setup](#setup)
+  - [MVT - Model View Template](#mvt---model-view-template)
   - [Django Project Structure: Urls and Views](#django-project-structure-urls-and-views)
   - [Template Basics](#template-basics)
     - [Templates: Inheritance](#templates-inheritance)
@@ -32,7 +33,21 @@ python manage.py runserver
 python manage.py startapp <app_name>
 ```
 
+## MVT - Model View Template
+
+<div align="center">
+<img src="img/MVT.jpg" alt="MVT.jpg" width="800px">
+</div>
+
+<div align="center">
+<img src="img/DjangoApps.jpg" alt="DjangoApps.jpg" width="800px">
+</div>
+
 ## Django Project Structure: Urls and Views
+
+<div align="center">
+<img src="img/URLsandViews.jpg" alt="URLsandViews.jpg" width="800px">
+</div>
 
 <div align="center">
 <img src="img/Django_intro.jpg" alt="intro.jpg" width="1000px">
