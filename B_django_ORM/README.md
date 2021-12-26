@@ -5,12 +5,10 @@
     - [default migrations with sqlite3](#default-migrations-with-sqlite3)
     - [Create a new model](#create-a-new-model)
     - [Install PostgreSQL](#install-postgresql)
+  - [Relationships](#relationships)
+    - [One-to-Many](#one-to-many)
 
 ## ORM-Models
-
-<div align="center">
-<img src="img/Models.jpg" alt="Models.jpg" width="600px">
-</div>
 
 <div align="center">
 <img src="img/Django-ORM.jpg" alt="Django-ORM.jpg" width="1000px">
@@ -52,19 +50,25 @@ INSTALLED_APPS = [
 `app/models.py`
 
 ```python
-class Project(models.Model):
- """
- Project model
- """
- id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,unique=True)
- title = models.CharField(max_length=200)
- description = models.TextField()
- source_link = models.URLField(max_length=200, blank=True)
- created_at = models.DateTimeField(auto_now_add=True)
- updated_at = models.DateTimeField(auto_now=True)
+from django.db import models
+import uuid
 
- def __str__(self):
-  return self.name
+# Create your models here.
+class Product(models.Model):
+    """
+    Product model
+    """
+    id = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    price = models.DecimalField(max_digits=6, decimal_places=2)
+    inventory = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
 ```
 
 3. Make migrations and migrate
@@ -127,4 +131,50 @@ To show the list of tables with the corresponding schema name in PgSql, run this
 
 ```sql
 SELECT * FROM information_schema.tables where table_schema = 'public';
+```
+
+## Relationships
+
+### One-to-Many
+
+<div align="center">
+<img src="img/1-m.jpg" alt="OneToMany.jpg" width="1000px">
+</div>
+
+```python
+from django.db import models
+import uuid
+
+class Product(models.Model):
+    id = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    price = models.DecimalField(max_digits=6, decimal_places=2)
+    inventory = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+
+# One `Product` can have Many `Reviews`
+# One `Review` can only belong to one `Product`
+
+class Review(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    # above line will create 'product_id' column in Review table
+
+    VOTE_CHOICES = (
+        ('up', 'UP VOTE'),
+        ('down', 'DOWN VOTE'),
+    )
+    body = models.TextField(null=True, blank=True)
+    vote = models.CharField(max_length=10, choices=VOTE_CHOICES, default='up')
+    created_at = models.DateTimeField(auto_now_add=True)
+    id = models.UUIDField(default=uuid.uuid4, editable=False,
+                          unique=True, primary_key=True)
+
+    def __str__(self):
+        return self.body[:20]
 ```
