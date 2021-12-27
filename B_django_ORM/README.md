@@ -23,6 +23,12 @@
     - [Deleting Data](#deleting-data)
     - [Aggregation & Ordering](#aggregation--ordering)
   - [Rendering Queried Data in the Template](#rendering-queried-data-in-the-template)
+    - [Model Urls](#model-urls)
+      - [Manually](#manually)
+      - [Using `reverse`](#using-reverse)
+  - [Slugify before saving](#slugify-before-saving)
+    - [Using the Slug in the URL](#using-the-slug-in-the-url)
+  - [Querying Relationships](#querying-relationships)
 
 ## ORM-Models
 
@@ -584,3 +590,199 @@ def index(request):
 </body>
 </html>
 ```
+
+### Model Urls
+
+#### Manually
+
+`app/views.py`
+
+```python
+def book_detail(request, id):
+    # try:
+    #     book = Book.objects.get(id=id)
+    # except:
+    #     raise Http404('Book does not exist')
+    book = get_object_or_404(Book, id=id)
+    context = {
+        'title': book.title,
+        'author': book.author,
+        'rating': book.rating,
+    }
+    return render(request, 'app/book_detail.html', context)
+```
+
+`app/templates/app/book_detail.html`
+
+```html
+ <h3><a href="{% url 'index' %}">Go Home</a></h3>
+ <h1>{{title}}</h1>
+ <h3> - Author: {{author}}</h3>
+ <h3> - Avg. Rating: {{rating}}</h3>
+```
+
+`app/urls.py`
+
+```python
+from django.urls import path
+from . import views
+urlpatterns = [
+    path('', views.index, name='index'),
+    path('books/<int:id>', views.book_detail, name='book-details'),
+]
+```
+
+`app/templates/app/index.html`
+
+```html
+<ul>
+  {% for book in books %}
+   <li>
+   <!-- manual url link -->
+    <a href="{% url 'book-details' book.id %}">{{book.title}} </a>
+    (Ratings: {{book.rating}})
+   </li>
+  {% endfor %}
+ </ul>
+```
+
+#### Using `reverse`
+
+`app/urls.py`
+
+```python
+from django.urls import path
+from . import views
+urlpatterns = [
+    path('', views.index, name='index'),
+    path('books/<int:id>', views.book_detail, name='book-details'),
+]
+```
+
+`app/models.py`
+
+```python
+from django.urls import reverse
+
+class Book(models.Model):
+    title = models.CharField(max_length=200)
+    rating = models.IntegerField(default=0)
+    author = models.CharField(max_length=200)
+    is_bestseller = models.BooleanField(default=False)
+
+    # Model Url
+    def get_absolute_url(self):
+        # return reverse('book-details', kwargs={'pk': self.pk})
+        return reverse('book-details', args=[self.pk])
+
+    def __str__(self):
+        return self.title.title()
+```
+
+`app/templates/app/index.html`
+
+```html
+<ul>
+  {% for book in books %}
+   <li>
+    <!-- <a href="{% url 'book-details' book.id %}">{{book.title}} </a>  -->
+    <a href="{{ book.get_absolute_url}}">{{book.title}} </a>
+    (Ratings: {{book.rating}})
+   </li>
+  {% endfor %}
+ </ul>
+```
+
+## Slugify before saving
+
+A slug is a human-readable, unique identifier, used to identify a resource instead of a less human-readable identifier like an id. You use a slug when you want to refer to an item while preserving the ability to see, at a glance, what the item is.
+
+- Typically slugs are used when making `search-engine optimized(SEO)` urls
+
+<div align="center">
+<img src="img/slug.jpg" alt="slug.jpg" width="800px">
+</div>
+
+```python
+from django.utils.text import slugify
+
+class Book(models.Model):
+    title = models.CharField(max_length=200)
+    rating = models.IntegerField(default=0)
+    author = models.CharField(max_length=200)
+    is_bestseller = models.BooleanField(default=False)
+    slug = models.SlugField(default="", null=False, blank=False)
+
+    # slugify before save()
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.title)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.title.title()
+```
+
+```python
+Book.objects.get(title="Official IELTS Practice Materials").save()
+Book.objects.get(title="Official IELTS Practice Materials").slug
+# 'official-ielts-practice-materials'
+```
+
+### Using the Slug in the URL
+
+`app/urls.py`
+
+```python
+from django.urls import path
+from . import views
+urlpatterns = [
+    path('', views.index, name='index'),
+    path('books/<int:id>', views.book_detail, name='book-details'),
+]
+```
+
+`app/views.py`
+
+```python
+def book_detail(request, s):
+    # try:
+    #     book = Book.objects.get(id=id)
+    # except:
+    #     raise Http404('Book does not exist')
+    book = get_object_or_404(Book, slug=s)
+    context = {
+        'title': book.title,
+        'author': book.author,
+        'rating': book.rating,
+    }
+    return render(request, 'app/book_detail.html', context)
+```
+
+```python
+from django.utils.text import slugify
+
+class Book(models.Model):
+    title = models.CharField(max_length=200)
+    rating = models.IntegerField(default=0)
+    author = models.CharField(max_length=200)
+    is_bestseller = models.BooleanField(default=False)
+    slug = models.SlugField(default="", null=False, blank=False)
+
+    # slugify before save()
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.title)
+        super().save(*args, **kwargs)
+
+    # Model Url
+    # def get_absolute_url(self):
+    #     return reverse('book-details', args=[self.pk])
+    def get_absolute_url(self):
+        return reverse('book-details', args=[self.slug])
+
+    def __str__(self):
+        return self.title.title()
+```
+
+## Querying Relationships
+
+

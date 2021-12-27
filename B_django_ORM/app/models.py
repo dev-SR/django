@@ -1,6 +1,7 @@
 from django.db import models
 import uuid
-
+from django.urls import reverse
+from django.utils.text import slugify
 # Create your models here.
 
 
@@ -74,6 +75,19 @@ class Book(models.Model):
     rating = models.IntegerField(default=0)
     author = models.CharField(max_length=200)
     is_bestseller = models.BooleanField(default=False)
+    slug = models.SlugField(default="", null=False, blank=False, db_index=True)
+
+    # slugify before save()
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.title)
+        super().save(*args, **kwargs)
+
+    # Model Url
+    # def get_absolute_url(self):
+    #     # return reverse('book-details', kwargs={'pk': self.pk})
+    #     return reverse('book-details', args=[self.pk])
+    def get_absolute_url(self):
+        return reverse('book-details', args=[self.slug])
 
     def __str__(self):
         return self.title.title()
