@@ -17,13 +17,9 @@ class Product(models.Model):
     inventory = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    tags = models.ManyToManyField('Tags', blank=True, related_name='tags')
+    tags = models.ManyToManyField('Tag', blank=True, related_name='products')
     # 1. Tags` instead of Tag because Tag Model is defined later
-    # 2. related_name='tags' is used to avoid naming convention
-    #    when we access the tags from Product model
-    #    i.e. instead of product.tags_set.all(),we can use product.tags.all()
-    #       p = Product.objects.first()
-    #       p.tags.all()
+
 
     def __str__(self):
         return self.title
@@ -38,7 +34,14 @@ class Review(models.Model):
         ('up', 'UP VOTE'),
         ('down', 'DOWN VOTE'),
     )
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE, related_name='reviews')
+    # above line will create 'product_id' column in Review table
+
+    # related_name for reverse relation
+    # p = Product.objects.get(title="Apple iPhone 12 Pro Max")
+    # p.review_set.all() # X -without `related_name` X
+    # p.reviews.all()
     body = models.TextField(null=True, blank=True)
     vote = models.CharField(max_length=10, choices=VOTE_CHOICES, default='up')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -53,27 +56,30 @@ class Review(models.Model):
 # Many `Products` can have Many `Tags`
 # Many `Tags` can be applied to Many `Products`
 
-class Tags(models.Model):
+class Tag(models.Model):
     name = models.CharField(max_length=200)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     id = models.UUIDField(default=uuid.uuid4, editable=False,
                           primary_key=True, unique=True)
-    products = models.ManyToManyField(
-        Product, blank=True, related_name='products')
-    # Many to Many relation can be defined in either one of the models.
-    # Or both of them for admin interface.
-    # t = Tags.objects.first()
-    # t.products.all()
 
     def __str__(self):
         return self.name
 
 
+class Author(models.Model):
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.first_name + ' ' + self.last_name
+
+
 class Book(models.Model):
     title = models.CharField(max_length=200)
     rating = models.IntegerField(default=0)
-    author = models.CharField(max_length=200)
+    author = models.ForeignKey(
+        Author, on_delete=models.CASCADE, null=True, related_name='books')
     is_bestseller = models.BooleanField(default=False)
     slug = models.SlugField(default="", null=False, blank=False, db_index=True)
 

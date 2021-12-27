@@ -29,6 +29,12 @@
   - [Slugify before saving](#slugify-before-saving)
     - [Using the Slug in the URL](#using-the-slug-in-the-url)
   - [Querying Relationships](#querying-relationships)
+    - [One to Many](#one-to-many-1)
+      - [query `Many` side of `One to Many` relation](#query-many-side-of-one-to-many-relation)
+      - [query `One` side of `One to Many` relation](#query-one-side-of-one-to-many-relation)
+    - [Many to Many](#many-to-many-1)
+      - [Query Many to Many fields](#query-many-to-many-fields)
+      - [Add Many to Many Field](#add-many-to-many-field)
 
 ## ORM-Models
 
@@ -190,9 +196,13 @@ class Product(models.Model):
 # One `Review` can only belong to one `Product`
 
 class Review(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
     # above line will create 'product_id' column in Review table
 
+    # `related_name` reverse relation
+    # p = Product.objects.get(title="Apple iPhone 12 Pro Max")
+    # p.review_set.all() # X -without `related_name` X
+    # p.reviews.all()
     VOTE_CHOICES = (
         ('up', 'UP VOTE'),
         ('down', 'DOWN VOTE'),
@@ -232,6 +242,9 @@ import uuid
 # M to M: Product to Tag
 
 class Product(models.Model):
+    """
+    Product model
+    """
     id = models.UUIDField(
         primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     title = models.CharField(max_length=200)
@@ -240,31 +253,17 @@ class Product(models.Model):
     inventory = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    tags = models.ManyToManyField('Tags', blank=True, related_name='tags')
-    # 1. Tags` instead of Tag because Tag Model is defined later
-    # 2. related_name='tags' is used to avoid naming convention
-    #    when we access the tags from Product model
-    #    i.e. instead of product.tags_set.all(),we can use product.tags.all()
-    #       p = Product.objects.first()
-    #       p.tags.all()
-
+    tags = models.ManyToManyField('Tag', blank=True, related_name='products')
+    #  Tags` instead of Tag because Tag Model is defined later
     def __str__(self):
         return self.title
 
-class Tags(models.Model):
+class Tag(models.Model):
     name = models.CharField(max_length=200)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     id = models.UUIDField(default=uuid.uuid4, editable=False,
                           primary_key=True, unique=True)
-
-    products = models.ManyToManyField(
-        Product, blank=True, related_name='products')
-    # Many to Many relation can be defined in just either one of the models.
-    # Or both of them for better admin interface.
-    # t = Tags.objects.first()
-    # t.products.all()
 
     def __str__(self):
         return self.name
@@ -276,10 +275,10 @@ Update `admin.py`:
 from django.contrib import admin
 
 # Register your models here.
-from .models import Product, Tags
-# from app.models import Product, Tags
+from .models import Product, Tag
+# from app.models import Product, Tag
 admin.site.register(Product)
-admin.site.register(Tags)
+admin.site.register(Tag)
 # ....
 
 ```
@@ -786,3 +785,111 @@ class Book(models.Model):
 ## Querying Relationships
 
 
+### One to Many
+
+#### query `Many` side of `One to Many` relation
+
+```python
+# Review-M
+# Product-1
+
+# get all reviews of Product="Apple iPhone 12 Pro Max"
+Review.objects.filter(product__title="Apple iPhone 12 Pro Max")
+    # <QuerySet [<Review: Not good>, <Review: Very Avg...>]>
+
+
+# get a review's associated product
+a_good_review = Review.objects.filter(body__icontains="good")[0]
+a_good_review
+    # <Review: Not good>
+a_good_review.product
+    # <Product: Apple iPhone 12 Pro Max>
+a_good_review.product.title
+    # 'Apple iPhone 12 Pro Max'
+
+# save Product with review
+from app.models import Product, Review
+p = Product(title="Samsung Galaxy S10", price=1000,description="Samsung Galaxy S10")
+p.save()
+r = Review(body="best android phone", product = p)
+r.save()
+r = Review(body="best android phone for 2020", product = p)
+r.save()
+```
+
+#### query `One` side of `One to Many` relation
+
+If we don't specify a `related_name`, Django automatically creates one using the name of our model with the suffix `_set`, for instance `product.review_set.all()`.
+
+```python
+# Product - 1
+# Review - M
+# get all reviews of Product="Apple iPhone 12 Pro Max"
+from app.models import Product,Review
+p = Product.objects.get(title="Apple iPhone 12 Pro Max")
+p.review_set.all()
+    # <QuerySet [<Review: Not good>, <Review: Very Avg...>]>
+```
+
+The `related_name` attribute specifies the name of the `reverse` relation from the `Review` model back to `Product` model.
+
+Defining a `related_name` attribute on the `Review` model (many side) allows us to use the `reverse` relation to access the `Review` objects that belong to an `Product` object.
+
+```python
+class Review(models.Model):
+    # ........
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE, related_name='reviews')
+    # ......
+```
+
+Run these commands:
+
+```python
+python manage.py makemigrations
+python manage.py migrate
+```
+
+Now we can access the `Book` objects that belong to an `Author` object using the `reverse` relation.
+
+```python
+p = Product.objects.get(title="Apple iPhone 12 Pro Max")
+p.reviews.all()
+# <QuerySet [<Review: Not good>, <Review: Very Avg...>]>
+p.reviews.filter(body__icontains='good')
+# <QuerySet [<Review: Not good>]>
+```
+
+### Many to Many
+
+#### Query Many to Many fields
+
+```python
+tag = Tag.objects.get(name="SmartPhone")
+tag.products.all()
+# <QuerySet [<Product: Apple iPhone 12 Pro Max>, <Product: Google Pixel>, <Product: Apple iPhone 11 Pro, 64GB>]>
+tag.products.filter(title__icontains='pixel')
+# <QuerySet [<Product: Google Pixel>]>
+
+
+p = Product.objects.get(title="Apple iPhone 12 Pro Max")
+p.tags.all()
+# <QuerySet [<Tag: SmartPhone>, <Tag: Mobile>]>
+```
+
+#### Add Many to Many Field
+
+<div align="center">
+<img src="img/file_name" alt="file_name" width="800px">
+</div>
+
+```python
+# add new tag
+p = Product.objects.get(title="Apple iPhone 12 Pro Max")
+t = Tag.objects.create(name="Apple")
+p.tags.add(t)
+# existing tag
+p = Product.objects.get(title="Apple iPhone 12 Pro Max")
+t = Tag.objects.get(name="iphone")
+p.tags.add(t)
+```
