@@ -1,12 +1,14 @@
 # Customizing the Admin Site
 
 - [Customizing the Admin Site](#customizing-the-admin-site)
-	- [default migrations with sqlite3](#default-migrations-with-sqlite3)
-	- [Registering Models](#registering-models)
-	- [Customizing List Page](#customizing-list-page)
-	- [Adding Computed Columns](#adding-computed-columns)
-	- [Selecting Related Objects](#selecting-related-objects)
-	- [Overriding the Base QuerySet](#overriding-the-base-queryset)
+  - [default migrations with sqlite3](#default-migrations-with-sqlite3)
+  - [Registering Models](#registering-models)
+  - [Customizing List Page](#customizing-list-page)
+  - [Adding Computed Columns](#adding-computed-columns)
+  - [Selecting Related Objects](#selecting-related-objects)
+  - [Overriding the Base QuerySet](#overriding-the-base-queryset)
+  - [Search Fields](#search-fields)
+  - [Custom Actions](#custom-actions)
 
 ## default migrations with sqlite3
 
@@ -154,4 +156,75 @@ class TagAdmin(admin.ModelAdmin):
 
 <div align="center">
 <img src="img/ordering_qset_1.jpg" alt="ordering_qset_1.jpg" width="1000px">
+</div>
+
+## Search Fields
+
+```python
+@admin.register(models.Product)
+class ProductAdmin(admin.ModelAdmin):
+    # ....
+    search_fields = ['title__icontains']
+    # ...
+```
+
+<div align="center">
+<img src="img/filter_1.jpg" alt="filter_1.jpg" width="1000px">
+</div>
+
+```python
+class InventoryFilter(admin.SimpleListFilter):
+    title = 'inventory'
+    parameter_name = 'inventory'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('in', 'In Stock'),
+            ('out', 'Out of Stock'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'in':
+            return queryset.filter(inventory__gt=0)
+        if self.value() == 'out':
+            return queryset.filter(inventory=0)
+
+
+@admin.register(models.Product)
+class ProductAdmin(admin.ModelAdmin):
+    # l.....
+    list_filter = [InventoryFilter]
+```
+
+<div align="center">
+<img src="img/filter_2.jpg" alt="filter_2.jpg" width="1000px">
+</div>
+
+## Custom Actions
+
+Clearing inventory of selected products:
+
+<div align="center">
+<img src="img/action.jpg" alt="action.jpg" width="1000px">
+</div>
+
+```python
+from django.contrib import admin, messages
+@admin.register(models.Product)
+class ProductAdmin(admin.ModelAdmin):
+    actions = ['clear_inventory']
+
+    @admin.action(description='Clear Inventory')
+    def clear_inventory(self, request, queryset):
+        cleared_inventory = queryset.update(inventory=0)
+        self.message_user(
+            request, f'Cleared {cleared_inventory} inventory', messages.ERROR)
+```
+
+<div align="center">
+<img src="img/action_1.jpg" alt="action_1.jpg" width="1000px">
+</div>
+
+<div align="center">
+<img src="img/action_2.jpg" alt="action_2.jpg" width="1000px">
 </div>
