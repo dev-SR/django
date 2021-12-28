@@ -1,6 +1,8 @@
 from django.shortcuts import render
 from django.http import HttpResponse
 
+from app.forms import DjangoForm
+
 
 def index(request):
     context = {
@@ -15,3 +17,8 @@ def dynamic(request, x):
         'value': x
     }
     return render(request, 'app/dynamic.html', context)
+
+
+def render_forms(request):
+    form = DjangoForm()
+    return render(request, 'app/forms.html', {'form': form})

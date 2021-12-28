@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %} APP {% endblock %}
+{% block content %}
+	{% include "app/includes/header.html" with active_page="index" %}
+<div class="h-screen flex justify-center items-center flex-col">
+	 <form action="" method="post">
+		 {% csrf_token %}
+			{% for field in form %}
+				<div class="flex flex-col ">
+					{% if field.errors %}
+						errors
+					{% endif %}
+					{{field.label_tag}}
+					<div class="border border-black bg-slate-600">
+						{{field}}
+					</div>
+					{{field.errors}}
+				</div>
+			{% endfor %}
+		 <button type='submit'>Send</button>
+	 </form>
+</div>
+
+{% endblock %}
