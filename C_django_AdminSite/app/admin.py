@@ -31,6 +31,8 @@ class ProductAdmin(admin.ModelAdmin):
     list_per_page = 5
     search_fields = ['title__icontains']
     list_filter = [InventoryFilter]
+    autocomplete_fields = ['tags']
+    # (admin.E040) TagAdmin must define "search_fields", because it's referenced by ProductAdmin.autocomplete_fields.
 
     def reviews__body(self, obj):
         return obj.reviews.all()[0].body
@@ -66,6 +68,7 @@ class TagAdmin(admin.ModelAdmin):
     list_display = ['name', 'products_count']
     ordering = ['name']
     list_per_page = 5
+    search_fields = ['name']
 
     @admin.display(ordering='products_count')
     def products_count(self, tag):

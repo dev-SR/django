@@ -9,6 +9,8 @@
   - [Overriding the Base QuerySet](#overriding-the-base-queryset)
   - [Search Fields](#search-fields)
   - [Custom Actions](#custom-actions)
+  - [Customizing Forms](#customizing-forms)
+    - [Autocomplete](#autocomplete)
 
 ## default migrations with sqlite3
 
@@ -227,4 +229,30 @@ class ProductAdmin(admin.ModelAdmin):
 
 <div align="center">
 <img src="img/action_2.jpg" alt="action_2.jpg" width="1000px">
+</div>
+
+## Customizing Forms
+
+### Autocomplete
+
+<div align="center">
+<img src="img/autocomplete.jpg" alt="autocomplete.jpg" width="1000px">
+</div>
+
+
+```python
+@admin.register(models.Product)
+class ProductAdmin(admin.ModelAdmin):
+
+    autocomplete_fields = ['tags']
+    # (admin.E040) TagAdmin must define "search_fields",
+    # because it's referenced by ProductAdmin.autocomplete_fields.
+
+@admin.register(models.Tag)
+class TagAdmin(admin.ModelAdmin):
+    search_fields = ['name']
+```
+
+<div align="center">
+<img src="img/autocomplete_1.jpg" alt="autocomplete_1.jpg" width="1000px">
 </div>
