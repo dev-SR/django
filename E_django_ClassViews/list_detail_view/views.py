@@ -5,19 +5,26 @@ from .models import ModelL
 
 
 class ListViewClass(ListView):
-    template_name = 'listview/listview.html'
+    template_name = 'list_detail_view/listview.html'
     model = ModelL
     context_object_name = 'items'
     # without `context_object_name`, `object_list` is default name for list of objects
 
-	#  custom query set
+    #  custom query set
     def get_queryset(self):
         base_query = super().get_queryset()
         data = base_query.order_by('-name')
         return data
 
-	# customizing context
+        # customizing context
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['more_info'] = 'This is more info'
         return context
+
+
+class DetailViewClass(DetailView):
+    template_name = 'list_detail_view/detail.html'
+    model = ModelL
+    context_object_name = 'item'
+    # without `context_object_name`, `object` is default name for object

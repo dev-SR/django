@@ -5,6 +5,7 @@
     - [Showing ListView](#showing-listview)
     - [Showing DetailView](#showing-detailview)
   - [ListView](#listview)
+  - [DetailView](#detailview)
 
 ## TemplateView
 
@@ -134,6 +135,8 @@ class ListViewClass(ListView):
         return context
 ```
 
+`listveiw.html`
+
 ```html
 <ul>
    {% for d in items %}
@@ -144,4 +147,39 @@ class ListViewClass(ListView):
   </ul>
 
   <p>{{more_info}}</p>
+```
+
+## DetailView
+
+> Generic detail view DetailViewClass must be called with either an object `pk` or a `slug` in the URLconf.
+
+`urls.py`
+
+```python
+from django.urls import path
+from . import views
+urlpatterns = [
+    path('', views.ListViewClass.as_view(), name='listview'),
+    # Generic detail view DetailViewClass must be called with either an object pk or a slug in the URLconf.
+    path('<int:pk>/', views.DetailViewClass.as_view(), name='detail'),
+]
+```
+
+`views.py`
+
+```python
+class DetailViewClass(DetailView):
+    template_name = 'list_detail_view/detail.html'
+    model = ModelL
+    context_object_name = 'item'
+    # without `context_object_name`, `object` is default name for object
+```
+
+`detail.html`
+
+```html
+<body>
+ <h1>{{item.name}}</h1>
+ <p>{{item.email}}</p>
+</body>
 ```
