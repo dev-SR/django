@@ -10,6 +10,8 @@
   - [Store Form Data in Database](#store-form-data-in-database)
     - [Manually](#manually)
     - [Using 🚀 ModelForm 🚀](#using--modelform-)
+      - [updating existing data with ModelForm](#updating-existing-data-with-modelform)
+    - [Class Based Views](#class-based-views)
 
 ## Handle Form Manually
 
@@ -295,3 +297,164 @@ def review_class(request):
 ```
 
 ### Using 🚀 ModelForm 🚀
+
+`models.py`
+
+```python
+from django.db import models
+# Create your models here.
+class ReviewModel(models.Model):
+    username = models.CharField(max_length=100)
+    review_text = models.CharField(max_length=500)
+    rating = models.IntegerField()
+```
+
+`forms.py`
+
+```python
+from django import forms
+from .models import ReviewModel
+
+# class ReviewModelForm(forms.Form):
+# username = forms.CharField(label="Your Username", max_length=10, error_messages={
+#     'required': 'Please enter your username',
+#     'max_length': 'Please enter a username less than 10 characters',
+# }, required=False)
+# review_text = forms.CharField(
+#     label="Your Review", max_length=200, widget=forms.Textarea)
+# rating = forms.IntegerField(label="Your Rating", min_value=1, max_value=5)
+
+class ReviewModelForm(forms.ModelForm):
+    class Meta:
+        model = ReviewModel
+        # fields = ['username', 'review_text', 'rating']
+        fields = '__all__'
+        # exclude = ['username']
+        labels = {
+            'username': 'Your Username',
+            'review_text': 'Your Review',
+            'rating': 'Your Rating'
+        }
+        error_messages = {
+            'username': {
+                'required': 'Please enter your username',
+                'max_length': 'Please enter a username less than 10 characters',
+            },
+            'review_text': {
+                'required': 'Please enter your review',
+                'max_length': 'Please enter a review less than 200 characters',
+            },
+            'rating': {
+                'required': 'Please enter your rating',
+                'min_value': 'Please enter a rating greater than 1',
+                'max_value': 'Please enter a rating less than 5',
+            }
+        }
+        widgets = {
+            'review_text': forms.Textarea(attrs={'cols': 40, 'rows': 15})
+        }
+```
+
+`views.py`
+
+```python
+from .forms import ReviewModelForm
+# Create your views here.
+
+def modelform(request):
+    if request.method == 'POST':
+        form = ReviewModelForm(request.POST)
+        if form.is_valid():
+            form.save()
+            # print(form.cleaned_data)
+            # review = ReviewModel(
+            #     username=form.cleaned_data['username'],
+            #     review_text=form.cleaned_data['review_text'],
+            #     rating=form.cleaned_data['rating']
+            # )
+            # review.save()
+            return HttpResponseRedirect('thank-you')
+    else:
+        form = ReviewModelForm()
+    context = {
+        'form': form
+    }
+    return render(request, 'modelfm/modelform.html', context)
+```
+
+#### updating existing data with ModelForm
+
+```python
+from .forms import ReviewModelForm
+# Create your views here.
+
+def modelform(request):
+    if request.method == 'POST':
+        form = ReviewModelForm(request.POST)
+
+        existing_review = ReviewModel.objects.get(pk=1)
+        form = ReviewModelForm(request.POST, instance=existing_review)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect('thank-you')
+
+    else:
+        form = ReviewModelForm()
+    context = {
+        'form': form
+    }
+    return render(request, 'modelfm/modelform.html', context)
+```
+
+### Class Based Views
+
+```python
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("classbased", views.ReviewView.as_view()),
+    path("thank-you", views.thank_you),
+]
+```
+
+```python
+# def modelform(request):
+#     if request.method == 'POST':
+#         form = ReviewModelForm(request.POST)
+#         if form.is_valid():
+#             form.save()
+            # print(form.cleaned_data)
+            # review = ReviewModel(
+            #     username=form.cleaned_data['username'],
+            #     review_text=form.cleaned_data['review_text'],
+            #     rating=form.cleaned_data['rating']
+            # )
+            # review.save()
+    #         return HttpResponseRedirect('thank-you')
+    # else:
+    #     form = ReviewModelForm()
+    # context = {
+    #     'form': form
+    # }
+    # return render(request, 'modelfm/modelform.html', context)
+
+
+class ReviewView(View):
+    def get(self, request):
+        form = ReviewModelForm()
+        context = {
+            'form': form
+        }
+        return render(request, 'modelfm/modelform.html', context)
+
+    def post(self, request):
+        form = ReviewModelForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect('thank-you')
+        context = {
+            'form': form
+        }
+        return render(request, 'modelfm/modelform.html', context)
+```

@@ -38,7 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'reviews',
-    'reviews_class'
+    'reviews_class',
+    'modelfm',
 ]
 
 MIDDLEWARE = [

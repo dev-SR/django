@@ -20,4 +20,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('manual/', include('reviews.urls')),
     path('class/', include('reviews_class.urls')),
+    path('modelform/', include('modelfm.urls')),
 ]
