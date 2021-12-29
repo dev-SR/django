@@ -3,3 +3,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.form-control input,
+textarea {
+	@apply mb-2 rounded focus:border-indigo-500 focus:ring-indigo-500;
+}

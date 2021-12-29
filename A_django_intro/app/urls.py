@@ -7,5 +7,5 @@ urlpatterns = [
     path('', views.index, name='index'),
     # route: /app/others/<x>
     path('others/<str:x>', views.dynamic, name='others'),
-    path('forms', views.render_forms),
+    path('forms', views.render_forms, name='forms'),
 ]

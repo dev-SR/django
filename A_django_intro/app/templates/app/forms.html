@@ -5,21 +5,20 @@
 {% block content %}
 	{% include "app/includes/header.html" with active_page="index" %}
 <div class="h-screen flex justify-center items-center flex-col">
-	 <form action="" method="post">
+	 <form action="" method="post" novalidate>
 		 {% csrf_token %}
 			{% for field in form %}
-				<div class="flex flex-col ">
-					{% if field.errors %}
-						errors
-					{% endif %}
+				<div class="form-control flex flex-col ">
 					{{field.label_tag}}
-					<div class="border border-black bg-slate-600">
-						{{field}}
-					</div>
-					{{field.errors}}
+					{{field}}
+					{% if field.errors %}
+						{% for error in field.errors %}
+							<span class="text-red-500 mb-2">{{error}}</span>
+						{% endfor %}
+					{% endif %}
 				</div>
 			{% endfor %}
-		 <button type='submit'>Send</button>
+		 <button type='submit' class="bg-indigo-500 text-white rounded w-full p-2">Send</button>
 	 </form>
 </div>
 

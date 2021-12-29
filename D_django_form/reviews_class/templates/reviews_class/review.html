@@ -7,7 +7,7 @@
 	<title>Reviews</title>
 </head>
 <body>
-	 <form action="{% url 'review_class' %}" method="post">
+	 <form action="{% url 'review_class' %}" method="post" novalidate>
 		 {% csrf_token %}
 			{% for field in form %}
 				<div>

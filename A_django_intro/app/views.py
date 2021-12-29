@@ -20,5 +20,11 @@ def dynamic(request, x):
 
 
 def render_forms(request):
-    form = DjangoForm()
+    if request.method == 'POST':
+        form = DjangoForm(request.POST)
+        if form.is_valid():
+            print(form.cleaned_data)
+            return HttpResponse('Success')
+    else:
+        form = DjangoForm()
     return render(request, 'app/forms.html', {'form': form})
