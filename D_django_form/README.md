@@ -9,6 +9,7 @@
   - [Styling with Tailwind CSS](#styling-with-tailwind-css)
   - [Store Form Data in Database](#store-form-data-in-database)
     - [Manually](#manually)
+    - [Using 🚀 ModelForm 🚀](#using--modelform-)
 
 ## Handle Form Manually
 
@@ -85,8 +86,10 @@ def review_class(request):
             return HttpResponseRedirect('thank-you')
     else:
         form = ReviewForm()
-
-    return render(request, 'reviews_class/review.html', {'form': form})
+    context = {
+        'form': form
+    }
+    return render(request, 'reviews_class/review.html', context)
 
 def thank_you(request):
     return render(request, 'reviews_class/thank_you.html')
@@ -248,3 +251,47 @@ module.exports = {
 ## Store Form Data in Database
 
 ### Manually
+
+`models.py`
+
+```python
+from django.db import models
+class Review(models.Model):
+    username = models.CharField(max_length=100)
+    review_text = models.CharField(max_length=500)
+    rating = models.IntegerField()
+```
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+`views.py`
+
+```python
+from .forms import ReviewForm
+from .models import Review
+
+def review_class(request):
+    if request.method == 'POST':
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            # print(form.cleaned_data)
+            review = Review(
+                username=form.cleaned_data['username'],
+                review_text=form.cleaned_data['review_text'],
+                rating=form.cleaned_data['rating']
+            )
+            review.save()
+            return HttpResponseRedirect('thank-you')
+    else:
+        form = ReviewForm()
+    context = {
+        'form': form
+    }
+    return render(request, 'reviews_class/review.html', context)
+
+```
+
+### Using 🚀 ModelForm 🚀
