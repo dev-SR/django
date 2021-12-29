@@ -20,4 +20,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('tempview/', include('tempview.urls')),
     path('list_detail_view/', include('list_detail_view.urls')),
+    path('form_create_view/', include('form_create_view.urls')),
 ]

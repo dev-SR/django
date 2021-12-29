@@ -6,6 +6,7 @@
     - [Showing DetailView](#showing-detailview)
   - [ListView](#listview)
   - [DetailView](#detailview)
+  - [FormView and CreateView](#formview-and-createview)
 
 ## TemplateView
 
@@ -182,4 +183,42 @@ class DetailViewClass(DetailView):
  <h1>{{item.name}}</h1>
  <p>{{item.email}}</p>
 </body>
+```
+
+## FormView and CreateView
+
+### FormView
+
+```python
+class FormClassView(FormView):
+    form_class = ReviewModelForm
+    template_name = 'form_create_view/review.html'
+    success_url = 'thank-you'
+
+    def form_valid(self, form):
+        form.save()
+        return super().form_valid(form)
+
+
+class ThankYouView(TemplateView):
+    template_name = 'form_create_view/thank_you.html'
+```
+
+### CreateView
+
+```python
+# class FormClassView(FormView):
+#     form_class = ReviewModelForm
+#     template_name = 'form_create_view/review.html'
+#     success_url = 'thank-you'
+
+#     def form_valid(self, form):
+#         form.save()
+#         return super().form_valid(form)
+
+class CreateViewClass(CreateView):
+    model = ReviewModel
+    form_class = ReviewModelForm
+    template_name = 'form_create_view/review.html'
+    success_url = 'thank-you'
 ```

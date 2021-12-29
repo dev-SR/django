@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'tempview',
     'list_detail_view',
+    'form_create_view'
 ]
 
 MIDDLEWARE = [
