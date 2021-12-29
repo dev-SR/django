@@ -1,9 +1,10 @@
 # Generic Class Views in Django
 
 - [Generic Class Views in Django](#generic-class-views-in-django)
-	- [TemplateView](#templateview)
-		- [Showing ListView](#showing-listview)
-		- [Showing DetailView](#showing-detailview)
+  - [TemplateView](#templateview)
+    - [Showing ListView](#showing-listview)
+    - [Showing DetailView](#showing-detailview)
+  - [ListView](#listview)
 
 ## TemplateView
 
@@ -97,4 +98,50 @@ class TempDetailView(TemplateView):
  <h1>{{data.name}}</h1>
  <p>{{data.email}}</p>
 </body>
+```
+
+## ListView
+
+`views.py`
+
+```python
+class ListViewClass(ListView):
+    template_name = 'listview/listview.html'
+    model = ModelL
+    context_object_name = 'items'
+    # without `context_object_name`, `object_list` is default name for list of objects
+```
+
+We can also customize :
+
+```python
+class ListViewClass(ListView):
+    template_name = 'listview/listview.html'
+    model = ModelL
+    context_object_name = 'items'
+    # without `context_object_name`, `object_list` is default name for list of objects
+
+    #  custom query set
+    def get_queryset(self):
+        base_query = super().get_queryset()
+        data = base_query.order_by('-name')
+        return data
+
+    # customizing context
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['more_info'] = 'This is more info'
+        return context
+```
+
+```html
+<ul>
+   {% for d in items %}
+   <li>
+    <span> <b>{{d.name}}</b> </span> - <i>{{d.email}}</i>
+   </li>
+   {% endfor %}
+  </ul>
+
+  <p>{{more_info}}</p>
 ```
