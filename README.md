@@ -6,6 +6,28 @@
 
 ## Setup
 
+### To manage Python environments, you can use virtual environments. Here are some basic commands:
+
+1. **Create a virtual environment:**
+   ```bash
+   python -m venv .venv
+   ```
+
+2. **Activate the virtual environment:**
+     ```bash
+      .\.venv\Scripts\activate
+     ```
+
+3. **Deactivate the virtual environment:**
+   ```bash
+   deactivate
+   ```
+
+4. **Install packages within the virtual environment:**
+   ```bash
+   pip install package_name
+   ```
+
 ### Crating Virtual Environment with `pipenv`
 
 ```bash
