@@ -23,9 +23,9 @@
    deactivate
    ```
 
-4. **Install packages within the virtual environment:**
+4. **Install django:**
    ```bash
-   pip install package_name
+   pip install django
    ```
 
 ### Crating Virtual Environment with `pipenv`
@@ -54,4 +54,27 @@ python manage.py runserver
 
 ### create App
 python manage.py startapp app
+```
+
+## Django commands
+
+```bash
+### create django project
+django-admin startproject config . # . means current directory
+
+### start development server
+python manage.py runserver
+# Starting development server at http://127.0.0.1:8000/
+
+### Create app folder and files
+python manage.py startapp <app-name>
+
+### Preps the database for migration
+python manage.py makemigrattions
+
+### Execute migration and update databases
+python manage.py migrate
+
+### Create superuser
+python manage.py createsuperuser
 ```
