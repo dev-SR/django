@@ -1,0 +1,34 @@
+{% load compress %}
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Django + HTMX + Tailwind CSS</title>
+
+    {% compress css %}
+      <link rel="stylesheet" href="{% static 'src/output.css' %}">
+    {% endcompress %}
+
+  </head>
+  <body >
+    {% block content %}
+    {% endblock content %}
+     <!-- new -->
+    {% compress js %}
+      <script type="text/javascript" src="{% static 'src/htmx.js' %}"></script>
+      {% endcompress %}
+      <script src="https://unpkg.com/htmx.org/dist/ext/response-targets.js"></script>
+
+    <!-- new -->
+    <script>
+      document.body.addEventListener('htmx:configRequest', (event) => {
+        event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+      })
+      {% comment %} This event listener adds the CSRF token to the request header. {% endcomment %}
+    </script>
+  </body>
+</html>
