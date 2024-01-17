@@ -28,7 +28,6 @@
       document.body.addEventListener('htmx:configRequest', (event) => {
         event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
       })
-      {% comment %} This event listener adds the CSRF token to the request header. {% endcomment %}
     </script>
   </body>
 </html>

@@ -86,6 +86,7 @@ TEMPLATES = [
 
 
 ```bash
+pnpm init
 pnpm install -D tailwindcss
 npx tailwindcss init
 ```
@@ -116,8 +117,10 @@ module.exports = {
 
 7. Run the following command to watch for changes and compile the Tailwind CSS code:
 
-```bash
-npx tailwindcss -i ./static/src/input.css -o ./static/src/output.css --watch
+```json
+"scripts": {
+	"dev:css": "tailwindcss -i ./static/src/input.css -o ./static/src/output.css --watch"
+},
 ```
 
 ### HTMLX

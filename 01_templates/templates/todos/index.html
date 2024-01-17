@@ -9,13 +9,7 @@
 		hx-trigger="keyup changed delay:250ms"
 		hx-indicator=".htmx-indicator"
 		hx-target="#todo-results"
-		{%
-		comment
-		%}
 		hx-target-5*="#serious-errors"
-		{%
-		endcomment
-		%}
 		hx-target-404="#not-found"
 		placeholder="Search"
 		class="bg-white h-10 px-5 pr-10 rounded-full text-2xl focus:outline-none"
@@ -48,5 +42,4 @@
 		</tbody>
 	</table>
 </div>
-
 {% endblock content %}
