@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-4@9(p!dd$3)(hut3wujd^^26km9hcak-qpt=l+-exs&k5bvdis"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', '') != 'False'
+DEBUG = True
 
 ALLOWED_HOSTS = []
 
@@ -121,17 +121,21 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'  # For development only
-MEDIA_URL = 'media/'  # For development only
-STATIC_ROOT = BASE_DIR / "staticfiles"  # For production only
-STATICFILES_DIRS = [
+MEDIA_URL = ''  # For development only
+STATICFILES_DIRS = [  # where to find static files
     BASE_DIR / "static",
 ]
-
-MEDIA_ROOT = BASE_DIR / "media"
+# production time static files generation by 'python manage.py collectstatic':
+# where to put static files for production
+STATIC_ROOT = BASE_DIR / "staticfiles"
+# where to put media files for production
+MEDIA_ROOT = BASE_DIR / "static/images"
+# default / The list of finder backends that know how to find static files in various locations.
 STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.FileSystemFinder",
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
 ]
+
 # django-compressor
 COMPRESS_ROOT = BASE_DIR / "static"
 COMPRESS_ENABLED = True
