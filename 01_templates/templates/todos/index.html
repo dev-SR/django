@@ -1,22 +1,19 @@
-{% extends "_base.html" %} {% block content %}
+{% extends "_base.html" %}
+{% block page_title %}Todo with HTMX{% endblock page_title %}</title>
+
+{% block content %}
 <h1 class="text-3xl text-blue-800">Root-level todos/templates/index.html</h1>
 <a href="{% url 'index' %}" class="underline">Home</a>
 <div class="w-small w-2/3 mx-auto py-10 text-gray-600" hx-ext="response-targets">
 	<input
 		type="text"
 		name="search"
-		hx-post="/todos/search"
+		hx-post="{% url 'search' %}"
 		hx-trigger="keyup changed delay:250ms"
-		hx-indicator=".htmx-indicator"
 		hx-target="#todo-results"
-		hx-target-5*="#serious-errors"
-		hx-target-404="#not-found"
 		placeholder="Search"
 		class="bg-white h-10 px-5 pr-10 rounded-full text-2xl focus:outline-none"
 	/>
-	<span class="htmx-indicator">Searching...</span>
-	<div id="serious-errors"></div>
-	<div id="not-found" class="text-red-500"></div>
 	<table class="border-collapse w-full">
 		<thead>
 			<tr>

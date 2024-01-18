@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 django = "*"
 django-compressor = "*"
+django-browser-reload = "*"
 
 [dev-packages]
 
