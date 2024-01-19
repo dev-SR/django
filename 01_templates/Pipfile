@@ -7,6 +7,10 @@ name = "pypi"
 django = "*"
 django-compressor = "*"
 django-browser-reload = "*"
+django-extensions = "*"
+ipython = "*"
+bpython = "*"
+werkzeug = "*"
 
 [dev-packages]
 

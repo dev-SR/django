@@ -12,9 +12,9 @@
 # .\.venv\Scripts\activate
 # pip install django django-compressor
 mkdir .venv
-pipenv install django django-compressor
+pipenv install django django-compressor django-browser-reload django-extensions ipython bpython
 pipenv shell
-django-admin startproject config .
+django-admin startproject core .
 python manage.py startapp todos
 python manage.py migrate
 python manage.py runserver
@@ -123,6 +123,69 @@ module.exports = {
 },
 ```
 
-### HTMLX
+8. Load precessed `output.css` in `templates\_base.html`
+
+`templates\_base.html`
+
+```html
+{% load compress %} {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>{% block page_title %}Django + Tailwind CSS + HTMX{% endblock page_title %}</title>
+		{% compress css %}
+		<link rel="stylesheet" href="{% static 'src/output.css' %}" />
+		<!-- HTMX start -->
+		{% endcompress %}
+	</head>
+	<body>
+		{% block content %} {% endblock content %}
+	</body>
+</html>
+```
+
+
+
+### HTMX
 
 1. Download `https://unpkg.com/htmx.org@1.9.10/dist/htmx.js` and save to `static/src`
+2. Load `htmx.js` in `_base.html` also set header to use crf_token
+
+
+`templates\_base.html`
+
+```html
+{% load compress %} {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>{% block page_title %}Django + Tailwind CSS + HTMX{% endblock page_title %}</title>
+		{% compress css %}
+		<link rel="stylesheet" href="{% static 'src/output.css' %}" />
+		{% endcompress %}
+		<!-- HTMX start -->
+		{% compress js %}
+		<script type="text/javascript" src="{% static 'src/htmx.js' %}"></script>
+		{% endcompress %}
+		<!-- HTMX end-->
+	</head>
+	<body>
+		{% block content %} {% endblock content %}
+		<!-- HTMX start -->
+
+		<script>
+			document.body.addEventListener('htmx:configRequest', (event) => {
+				event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+			});
+		</script>
+		<!-- HTMX end-->
+	</body>
+</html>
+```
+
