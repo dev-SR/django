@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev:css": "tailwindcss -i ./static/src/input.css -o ./static/src/output.css --watch"
+    "dev:css": "tailwindcss -i ./static/src/input.css -o ./static/src/output.css --minify --watch"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.1"
