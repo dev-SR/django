@@ -51,12 +51,16 @@ INSTALLED_APPS = [
 
 
 ```python
-# config/settings.py
+# default / The list of finder backends that know how to find static files in various locations.
+STATICFILES_FINDERS = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+]
 
 # django-compressor
-COMPRESS_ROOT = BASE_DIR / "static" # defines the absolute location from where the files to be compressed are read from and the compressed files are written to.
+COMPRESS_ROOT = BASE_DIR / "static"
 COMPRESS_ENABLED = True
-STATICFILES_FINDERS = ("compressor.finders.CompressorFinder",)
+STATICFILES_FINDERS += ["compressor.finders.CompressorFinder"]
 
 ```
 
