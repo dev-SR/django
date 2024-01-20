@@ -1,0 +1,4 @@
+<nav class='h-10 bg-indigo-400 flex items-center justify-center space-x-4'>
+	<a href="{% url 'index' %}" class="{% if request.resolver_match.view_name == "index" %}text-white underline{% endif %}">Home</a>
+	<a href="{% url 'app1' %}" class="{% if request.resolver_match.view_name == "app1" %}text-white underline{% endif %}">App1Route1</a>
+</nav>

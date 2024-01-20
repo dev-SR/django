@@ -1,0 +1,30 @@
+{% extends "_base.html" %}
+<!--  -->
+{% block page_title %} {{block.super}}: News {% endblock %}
+<!--  -->
+{% block content %}
+<!--  -->
+<h1>Home</h1>
+<p>University: {{ name|title }}</p>
+
+{% if isOpen %}
+<p>Open</p>
+{% else %}
+<p>Closed</p>
+{% endif %}
+<!--  -->
+Students:
+<ul class="pl-5 text-indigo-500">
+    {% for student in students %}
+        {% include 'app1/student_details.html' %}
+    {% endfor %}
+</ul>
+
+<br class="pb-3" />
+{% lorem 2 p%}
+<br class="pb-3" />
+{% endblock content %}
+
+<!--
+
+-->
