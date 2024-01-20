@@ -8,14 +8,20 @@
 - [https://flowbite.com/docs/getting-started/django/](https://flowbite.com/docs/getting-started/django/)
 
 ```bash
-# python -m venv .venv
-# .\.venv\Scripts\activate
-# pip install django django-compressor
+pnpm init
+pnpm install -D tailwindcss
+npx tailwindcss init
 mkdir .venv
 pipenv install django django-compressor django-browser-reload django-extensions ipython bpython
 pipenv shell
+# using venv...
+# python -m venv .venv
+# .\.venv\Scripts\activate
+```
+
+```bash
 django-admin startproject core .
-python manage.py startapp todos
+python manage.py makemigrations
 python manage.py migrate
 python manage.py runserver
 ```
@@ -42,7 +48,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'todos',  # new
     'compressor',  # new
 ]
 ```
@@ -86,17 +91,8 @@ TEMPLATES = [
 @tailwind utilities;
 ```
 
-5. Init tailwindcss
 
-
-```bash
-pnpm init
-pnpm install -D tailwindcss
-npx tailwindcss init
-```
-
-
-6. Update `tailwind.config.js` like so:
+5. Update `tailwind.config.js` like so:
 
 
 ```typescript
@@ -119,15 +115,15 @@ module.exports = {
 };
 ```
 
-7. Run the following command to watch for changes and compile the Tailwind CSS code:
+6. Run the following command to watch for changes and compile the Tailwind CSS code:
 
 ```json
 "scripts": {
-	"dev:css": "tailwindcss -i ./static/src/input.css -o ./static/src/output.css --watch"
+	"dev:css": "tailwindcss -i ./static/src/input.css -o ./static/src/output.css --minify --watch"
 },
 ```
 
-8. Load precessed `output.css` in `templates\_base.html`
+7. Load precessed `output.css` in `templates\_base.html`
 
 `templates\_base.html`
 
@@ -150,7 +146,6 @@ module.exports = {
 	</body>
 </html>
 ```
-
 
 
 ### HTMX
