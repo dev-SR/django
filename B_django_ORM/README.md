@@ -13,7 +13,6 @@
       - [Retrieving all objects - `all()`](#retrieving-all-objects---all)
       - [Retrieving a single object with `get(attribute='value')`](#retrieving-a-single-object-with-getattributevalue)
       - [Limiting QuerySets `all()[offset:offset+limit]`](#limiting-querysets-alloffsetoffsetlimit)
-      - [Retrieving specific objects with `filters(attribute='value')`](#retrieving-specific-objects-with-filtersattributevalue)
       - [Field lookups - mimic `WHERE` clause](#field-lookups---mimic-where-clause)
         - [`Or` condition with `Q` objects](#or-condition-with-q-objects)
         - [`exclude()`](#exclude)
@@ -348,54 +347,29 @@ Overview:
 <img src="img/QuerysetsList.png" alt="Querysets.jpg" width="1000px">
 </div>
 
+For running queries, we can use the `python manage.py shell` or better use `django_extensions` lib and run `python manage.py runscript <script_name>` to run a script.
+
+`app\scripts\run_orm.py`
+
+```python
+from app.models import Product
+
+def run(*arg):
+    products = Product.objects.all()
+    print(list(products))
+```
+
 ### Inserting Data - `save()`
 
-To represent database-table data in Python objects, Django uses an intuitive system: A model `class` represents a database table, and an `instance` of that class represents a particular record in the database table.
-
-To create an object, instantiate it using keyword arguments to the model class, then call `save()` to save it to the database.
-
 ```python
-class Book(models.Model):
-    title = models.CharField(max_length=200)
-    rating = models.IntegerField(default=0)
-    def __str__(self):
-        return self.title.title()
+from app.models import Product
+
+product = Product()
+product.title = "Product 1"
+product.description = "Product 1 description"
+product.price = 100
+product.save()
 ```
-
-```python
-# python manage.py shell
-from app.models import Book
-harry_potter = Book(title="Harry Potter 1 - The Philoshoper's Stone",rating=5)
-harry_potter.save()
-b2 = Book(title="Lord of the Rings", rating=4)
-b2.save()
-```
-
-`save()` takes a number of advanced options. For example, If a model has an AutoField but you want to define a new object’s ID explicitly when saving, define it explicitly before saving, rather than relying on the auto-assignment of the ID:
-
-```python
-b3 = Book(id=3, name='Programming and Problem Solving with C', rating=3)
-b3.id     # Returns 3.
-b3.save()
-b3.id     # Returns 3.
-```
-
-See the documentation for [save()](https://docs.djangoproject.com/en/4.0/ref/models/instances/#django.db.models.Model.save) for complete details.
-
-To create and save an object in a single step, use the `create()` method.
-
-```python
-b = Book.objects.create(title='Programming and Problem Solving with C', rating=3)
-```
-
-and:
-
-```python
-b = Book(title='Programming and Problem Solving with C', rating=3)
-b.save(force_insert=True)
-```
-
-are equivalent.
 
 ### Retrieving Data
 
@@ -404,11 +378,10 @@ are equivalent.
 The `all()` method returns a `QuerySet` of all the objects in the database.
 
 ```python
-Book.objects.all()
-# <QuerySet [<Book: Harry Potter 1 - The Philoshoper'S Stone>,
-#               <Book: Lord Of The Rings>, <Book: Programming And Problem Solving With C>]>
-Book.objects.all()[1]
-# <Book: Lord Of The Rings>
+from app.models import Product
+
+products = Product.objects.all()
+print(list(products))
 ```
 
 #### Retrieving a single object with `get(attribute='value')`
@@ -423,21 +396,21 @@ Model.objects.get(attribute="value")
 ```
 
 ```python
-Book.objects.get(pk=2)
-# <Book: Lord Of The Rings>
-Book.objects.get(title="Lord of the Rings")
-# <Book: Lord Of The Rings>
+from app.models import Product
+
+product = Product.objects.get(id=1) # or pk=1
+print(product)
 ```
 
 `get()` will raise a `DoesNotExist` exception. This exception is an attribute of the model class that the query is being performed on - so in the code above, if there is no `Entry` object with a primary key of 20, Django will raise `Entry.DoesNotExist`.
 
 ```python
-Book.objects.get(pk=20)
+pprint(Product.objects.get(pk=10))
 # Traceback (most recent call last):
 #   File "<console>", line 1, in <module>
 #   File ...
 #     raise self.model.DoesNotExist(
-# app.models.Book.DoesNotExist: Book matching query does not exist.
+# app.models.Product.DoesNotExist: Product matching query does not exist.
 ```
 
 #### Limiting QuerySets `all()[offset:offset+limit]`
@@ -447,83 +420,141 @@ Use a subset of Python’s array-slicing syntax to limit your QuerySet to a cert
 For example, this returns the first 2 objects (LIMIT 2):
 
 ```python
-Book.objects.all()[:2]
-# <QuerySet [<Book: Harry Potter 1 - The Philoshoper'S Stone>, <Book: Lord Of The Rings>]>
+Product.objects.all()[:2]
 ```
 
-This returns the sixth through tenth objects (OFFSET 2 LIMIT 3):
+This returns the sixth through tenth objects (OFFSET 2, LIMIT 3):
 
 ```python
-Book.objects.all()[2:5] #OFFSET 2 + LIMIT 3 = 5
-# <QuerySet [<Book: Programming And Problem Solving With C>, <Book: Barron’S Ielts Superpack>,
-#        <Book: The Official Cambridge Guide To Ielts>]>
-```
-
-#### Retrieving specific objects with `filters(attribute='value')`
-
-The QuerySet returned by `all()` describes all objects in the database table. Usually, though, you’ll need to select only a subset of the complete set of objects.
-
-```python
-Book.objects.filter(author="n/a")
-#  <QuerySet [<Book: Harry Potter 1 - The Philoshoper'S Stone>,
-# <Book: Lord Of The Rings>, <Book: Programming And Problem Solving With C>,
-#  <Book: Barron’S Ielts Superpack>, <Book: The Official Cambridge Guide To Ielts>,
-#  <Book: Official Ielts Practice Materials>]>
-Book.objects.filter(author="n/a",rating=4)
-# <QuerySet [<Book: Lord Of The Rings>, <Book: Barron’S Ielts Superpack>]>
+Product.objects.all()[2:5] # 5 - OFFSET 2 = LIMIT 3
 ```
 
 #### Field lookups - mimic `WHERE` clause
 
 Field lookups are how you specify the meat of an SQL `WHERE` clause. They’re specified as keyword arguments to the QuerySet methods `filter()`, `exclude()` and `get()`.
 
-Basic lookups keyword arguments take the form `field__lookuptype=value`. (That’s a `double-underscore`). For example:
-
 <div align="center">
 <img src="img/filter.jpg" alt="filter.jpg" width="800px">
 </div>
 
+Basic lookups keyword arguments take the form `field__lookuptype=value`. (That’s a `double-underscore`). For example:
+
 ```python
-# SELECT * FROM books WHERE rating <= 4;
+def run(*arg):
 
-Book.objects.filter(rating<=4)
-# Traceback (most recent call last):
-#   File "<console>", line 1, in <module>
-# NameError: name 'rating' is not defined
-Book.objects.filter(rating__lte=4)
-# <QuerySet [<Book: Lord Of The Rings>, <Book: Programming And Problem Solving With C>,
-#           <Book: Barron’S Ielts Superpack>, <Book: The Official Cambridge Guide To Ielts>,
-#           <Book: Official Ielts Practice Materials>]>
-Book.objects.filter(rating__lte=4, title__icontains='ielts')
-# SELECT ... WHERE rating <= 4 and ILIKE '%ielts%';
-# <QuerySet [<Book: Barron’S Ielts Superpack>, <Book: The Official Cambridge Guide To Ielts>,
-# <Book: Official Ielts Practice Materials>]>
-Book.objects.filter(id__in=[1,3,6])
-# <QuerySet [<Book: Harry Potter 1 - The Philoshoper'S Stone>,
-#       <Book: Programming And Problem Solving With C>, <Book: Official Ielts Practice Materials>]>
-# SELECT ... WHERE id IN (1, 3, 4);
+    # Exact Match
+    query1 = Product.objects.filter(title='Product 1')
 
+    # Case-Insensitive Exact Match
+    query2 = Product.objects.filter(title__iexact='product 1')
+
+    # Contains
+    query3 = Product.objects.filter(title__contains='Product')
+
+    # Case-Insensitive Contains
+    query4 = Product.objects.filter(title__icontains='product')
+
+    # StartsWith
+    query5 = Product.objects.filter(title__startswith='P')
+
+    # EndsWith
+    query6 = Product.objects.filter(title__endswith='1')
+
+    # In List
+    titles_list = ['Product 1', 'Product 2', 'Product 3']
+    query7 = Product.objects.filter(title__in=titles_list)
+
+    # Greater Than
+    query8 = Product.objects.filter(price__gt=0.00)
+
+    # Less Than
+    query9 = Product.objects.filter(price__lt=100000.00)
+
+    # Date Range
+    start_date = datetime(2022, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    end_date = datetime(2025, 12, 31, tzinfo=timezone.utc)
+    query10 = Product.objects.filter(created_at__range=(start_date, end_date))
+
+    # Status Filter (Choices Field)
+    query11 = Product.objects.filter(status=Product.Status.ACTIVE)
+
+    # Tag Filter (Many-to-Many Relationship)
+    query12 = Product.objects.filter(tags__name__icontains='Tag 1')
+
+    # Combining Queries with OR
+    combined_query = (query1 | query2 | query3 | query4 | query5 | query6 |
+                      query7 | query8 | query9 | query10 | query11 | query12).distinct()
+
+    # Combining Queries with AND
+    combined_query_and = (query1 & query8 & query11).distinct()
+
+    # Displaying results
+    print(list(combined_query)) # [<Product: Product 1>, <Product: Iphone 15 pro max>]
+    print(list(combined_query_and)) # [<Product: Product 1>]
 ```
 
 ##### `Or` condition with `Q` objects
 
 ```python
-from django.db.models import Q
-Book.objects.filter(Q(rating__lte=4) | Q(is_bestseller=True))
-# <QuerySet [<Book: Programming And Problem Solving With C>, <Book: The Official Cambridge Guide To Ielts>]>
-# combining with `and`
-Book.objects.filter(Q(rating__lt=4) | Q(is_bestseller=True),title__icontains='ielts')
-# <QuerySet [<Book: The Official Cambridge Guide To Ielts>]>
-# but watch out!! odering is important
-Book.objects.filter(title__icontains='ielts',Q(rating__lt=4) | Q(is_bestseller=True))
-#   File "<console>", line 1
-#     Book.objects.filter(title__icontains='ielts',Q(rating__lt=4) | Q(is_bestseller=True))
-#                                                                                         ^
-# SyntaxError: positional argument follows keyword argument
+def run():
+    # Q objects with different filtering methods
+    # Example 1: OR conditions
+    or_conditions = Q(title__icontains='product') | Q(
+        description__icontains='good')
+
+    # Example 2: AND conditions
+    and_conditions = Q(price__gt=50.00) & Q(status=Product.Status.ACTIVE)
+
+    # Example 3: Combined OR and AND conditions
+    combined_conditions = (Q(title__icontains='product') | Q(
+        description__icontains='good')) & Q(price__gt=50.00)
+
+    # Example 4: Excluding certain conditions
+    exclude_condition = ~Q(status=Product.Status.INACTIVE)
+
+    # Applying the conditions to the queryset
+    result_or_conditions = Product.objects.filter(or_conditions)
+    result_and_conditions = Product.objects.filter(and_conditions)
+    result_combined_conditions = Product.objects.filter(combined_conditions)
+    result_exclude_condition = Product.objects.filter(exclude_condition)
+
+    # Displaying results
+    print(result_or_conditions)
+    print(result_and_conditions)
+    print(result_combined_conditions)
+    print(result_exclude_condition)
 ```
 
-```python
+Dynamically constructing filters
 
+```python
+def run():
+    def build_dynamic_query(**kwargs):
+        dynamic_query = Q()
+
+        for key, value in kwargs.items():
+            if value:
+                if key == 'search':
+                    dynamic_query &= Q(title__icontains=value) | Q(
+                        description__icontains=value)
+                elif key == 'min_price':
+                    dynamic_query &= Q(price__gte=value)
+                elif key == 'status':
+                    dynamic_query &= Q(status=value)
+                # Add more conditions as needed for other parameters
+
+        return dynamic_query
+
+    dynamic_query = build_dynamic_query(
+        search='product',
+        min_price=10000,
+        status='active'
+        # Add more parameters as needed
+    )
+
+    products = Product.objects.filter(dynamic_query)
+
+    print(list(products))
 ```
 
 ##### `exclude()`
@@ -562,19 +593,16 @@ AND NOT headline = 'Hello'
 ### Updating Data
 
 ```python
-b = Book.objects.all()[0]
-b.author = "John"
-b.is_bestseller = True
-b.save()
+product1 = Product.objects.get(pk=1)
+product1.title = "Product 2"
+product1.save()
 ```
 
 ### Deleting Data
 
 ```python
-b = Book.objects.all()[0]
-# <Book: The Official Cambridge Guide To Ielts>
-b.delete()
-# (1, {'app.Book': 1})
+product1 = Product.objects.get(pk=1)
+product1.delete()
 ```
 
 ### Aggregation & Ordering

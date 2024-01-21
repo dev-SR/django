@@ -37,9 +37,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_browser_reload",  # new
+    "debug_toolbar",  # new
     'django_extensions',  # new
     "compressor",  # new
-    "django_browser_reload",  # new
 ]
 
 MIDDLEWARE = [
@@ -51,7 +52,11 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_browser_reload.middleware.BrowserReloadMiddleware",  # new auto reload
+    "debug_toolbar.middleware.DebugToolbarMiddleware",  # new DebugToolbar
+]
 
+INTERNAL_IPS = [  # new DebugToolbar
+    "127.0.0.1",
 ]
 
 ROOT_URLCONF = "core.urls"

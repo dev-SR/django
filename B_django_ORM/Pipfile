@@ -11,6 +11,7 @@ django-extensions = "*"
 ipython = "*"
 bpython = "*"
 werkzeug = "*"
+django-debug-toolbar = "*"
 
 [dev-packages]
 
