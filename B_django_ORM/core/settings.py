@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "django_browser_reload",  # new
     'django_extensions',  # new
     "compressor",  # new
+    "app"
 ]
 
 MIDDLEWARE = [

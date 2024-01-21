@@ -1,15 +1,13 @@
 # Django ORM
 
 - [Django ORM](#django-orm)
+  - [Database configuration](#database-configuration)
   - [ORM-Models](#orm-models)
-    - [default migrations with sqlite3](#default-migrations-with-sqlite3)
-    - [Create a new model](#create-a-new-model)
-      - [model options](#model-options)
-    - [Install PostgreSQL](#install-postgresql)
+    - [Creating Django models](#creating-django-models)
   - [Relationships](#relationships)
     - [One-to-Many](#one-to-many)
     - [Many-to-Many](#many-to-many)
-  - [QuerySet](#queryset)
+  - [CRUD operations](#crud-operations)
     - [Inserting Data - `save()`](#inserting-data---save)
     - [Retrieving Data](#retrieving-data)
       - [Retrieving all objects - `all()`](#retrieving-all-objects---all)
@@ -21,7 +19,7 @@
         - [`exclude()`](#exclude)
     - [Updating Data](#updating-data)
     - [Deleting Data](#deleting-data)
-    - [Aggregation & Ordering](#aggregation--ordering)
+    - [Aggregation \& Ordering](#aggregation--ordering)
   - [Rendering Queried Data in the Template](#rendering-queried-data-in-the-template)
     - [Model Urls](#model-urls)
       - [Manually](#manually)
@@ -36,198 +34,231 @@
       - [Query Many to Many fields](#query-many-to-many-fields)
       - [Add Many to Many Field](#add-many-to-many-field)
 
-## ORM-Models
+## Database configuration
 
-<div align="center">
-<img src="img/Django-ORM.jpg" alt="Django-ORM.jpg" width="1000px">
-</div>
-
-- [Models](https://docs.djangoproject.com/en/4.0/topics/db/models/#)
-- [field-types](https://docs.djangoproject.com/en/4.0/topics/db/models/#field-types)
-- [field-types-choices](https://docs.djangoproject.com/en/4.0/topics/db/models/#field-types-choices)
-
-### default migrations with sqlite3
-
-VSCode extension for sqlite3
-
-Name: SQLite Viewer
-Publisher: Florian Klampfer
-VS [Marketplace Link](https://marketplace.visualstudio.com/items?itemName=qwtel.sqlite-viewer)
-
-Migrate:
-
-```bash
-python manage.py migrate
-python manage.py createsuperuser
-```
-
-### Create a new model
-
-1. register app
+The default database configuration present in this file when a Django
+project is created is as follows:
 
 ```python
-INSTALLED_APPS = [
-    '...',
-    'app',
-]
+DATABASES = {
+    'default': {
+    'ENGINE': 'django.db.backends.sqlite3',
+    'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
 ```
 
-2. define model
+If you are using other databases, such as PostgreSQL, MySQL, and so on..
 
-`app/models.py`
+- [https://www.geeksforgeeks.org/how-to-use-postgresql-database-in-django/](https://www.geeksforgeeks.org/how-to-use-postgresql-database-in-django/)
+
+To get Python working with Postgres, you will need to install the “psycopg2” module.
+
+```bash
+pipenv install psycopg2
+```
+
+```python
+DATABASES = {
+    'default': {
+    'ENGINE': 'django.db.backends.postgresql',
+    'NAME': <db_name>,
+    'USER': postgres,
+    'PASSWORD': <password>,
+    'HOST': 'localhost',
+    'PORT': '5432',
+    }
+}
+```
+
+## ORM-Models
+
+Object Relational Mapping (ORM) is a programming technique that maps content in a relational database to object-oriented code. Instead of thinking in terms of tables, you write classes representing the data in project.
+
+### Creating Django models
+
+A Django model is essentially a Python class that holds the blueprint for creating a table in a database. The `models.py` file can have many such models, and each model is transformed into a database table. The attributes of the class form the fields and relationships of the database table as per the model definitions.
+
+Here is an blueprint of a model:
+
+```python
+from django.db import models
+class ModelName(models.Model):
+    field_name = models.CharField(field_options)
+```
+
+Example:
+
+```python
+from django.db import models
+class Product(models.Model):
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    price = models.DecimalField(max_digits=6, decimal_places=2)
+```
+
+Common field types, representing database column types:
+
+- `🟠CharField(max_length=None, **options)` : Text field for short to medium-sized strings.
+- `🟠TextField(**options)` : Suitable for longer text content.
+- `🟠IntegerField` : Holds integer values.
+- `🟠DecimalField(max_digits=None, decimal_places=None, **options)` : Stores decimal numbers with fixed precision.
+- `🟠BooleanField` : Represents True/False values.
+- `DateField(auto_now=False, auto_now_add=False, **options)` : Stores date values.
+- `TimeField(auto_now=False, auto_now_add=False, **options)` : Holds time values.
+- `🟠DateTimeField(auto_now=False, auto_now_add=False, **options)` : Combines date and time in a single field.
+- `🟠EmailField(max_length=254, **options)` : Ensures a valid email format.
+- `🟠ImageField(upload_to=None, height_field=None, width_field=None, max_length=100, **options)` : For uploading and storing image files.
+- `🟠FileField(upload_to='', storage=None, max_length=100, **options)` : Handles file uploads.
+- `🟠SlugField(max_length=50, **options)` : Used for URL-friendly representations of text.
+- `URLField(max_length=200, **options)` : Ensures a valid URL format.
+
+For primary keys, Django provides the following field types:
+
+- `AutoField/BigAutoField(primary_key=True,editable=False, unique=True, **options)` : An IntegerField that automatically increments according to available IDs.
+- `🟠UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True, **options)` - Primary key field, which stores a universally unique identifier (UUID) value.
+
+> Note that by default, Django will automatically add a `id` AutoField to serve as the primary key.
+
+For relationships, Django provides the following field types:
+
+- `🟠ForeignKey(to, on_delete, **options)` : Establishes a many-to-one relationship with another model.
+- `🟠ManyToManyField(to, **options)` : Creates a many-to-many relationship with another model.
+
+There are some **field options** that can be used to customize the field behavior:
+
+**Database Specific:**
+
+1. `unique`: Ensures each value is unique.
+2. `primary_key`: Designates the field as the primary key.
+3. `related_name`: Sets the reverse relation name for ForeignKey and ManyToManyField. **Naming should follow the name of the model that contains the field.**
+4. `on_delete`: Defines the behavior when the referenced object is deleted.
+5. `db_index`: Creates an index for the field.
+6. `null`: If `True`, Django will store empty values as NULL in the database. Default is False.
+7. `default`: The default value for the field.
+8. `auto_now`: Automatically set the field to now every time the object is saved. Useful for “last-modified” timestamps. The default value is False.
+9. `auto_now_add`: Automatically set the field to now when the object is first created. Useful for creation of timestamps. The default value is False.
+
+
+**Not Database Specific:**
+
+1. `blank`: Determines if the field is required in forms. If `True`, the field is allowed to be blank. Default is False.*Note that this is different than null. **null is purely database-related, whereas blank is validation-related.***
+2. `verbose_name`: Provides a human-readable name for the field.
+3. `help_text`: Offers additional information for forms.
+4. `editable`: Determines if the field is displayed in forms.
+5. `upload_to`: Specifies the directory path for file uploads.
+6. `error_messages`: Customizes error messages for validation failures.
+7. `validators`: Specifies a list of validators to run for the field. [/5.0/ref/validators](https://docs.djangoproject.com/en/5.0/ref/validators/#)
+8. `choices` : Provides choices for the field. i.e `choices=VOTE_CHOICES` where `VOTE_CHOICES = (('up', 'UP VOTE'),('down', 'DOWN VOTE'),)`
+
+While all fields and options affect the database in some way, the ones listed as "Database Specific" have a more direct impact on the database structure and queries. The ones listed as "Admin UI" are more related to how the field is presented and controlled in the Django Admin interface.
+
+- [More on field-types](https://docs.djangoproject.com/en/5.0/ref/models/fields/#field-types)
+- [More on field-options](https://docs.djangoproject.com/en/5.0/ref/models/fields/#field-options)
+
+Simple complete example:
 
 ```python
 from django.db import models
 import uuid
+from django.core.validators import MinValueValidator, MaxValueValidator
 
-# Create your models here.
 class Product(models.Model):
-    """
-    Product model
-    """
-    id = models.UUIDField(
-        primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    title = models.CharField(max_length=200)
-    description = models.TextField()
-    price = models.DecimalField(max_digits=6, decimal_places=2)
-    inventory = models.IntegerField(default=0)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    title = models.CharField(max_length=200,  verbose_name="Product name", help_text="Name of the product",)
+    description = models.TextField(null=True, blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Status(models.TextChoices):
+        # first value is stored in db and second value is displayed in admin
+        ACTIVE = 'active', 'Active'
+        INACTIVE = 'inactive', 'Inactive'
+
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
+
     def __str__(self):
-        return self.title
+        return f'{self.title}'
 ```
 
-3. Make migrations and migrate
+
+> Make migrations and migrate
 
 ```bash
 python manage.py makemigrations
 python manage.py migrate
-# shows only sql
-python manage.py sqlmigrate app_name migration_file_number
-# ex:
-python manage.py sqlmigrate app 0001_initial
 ```
 
-4. register Model for Admin site
+> Register Model for Admin site
 
 `app/model.py`
 
 ```python
 from django.contrib import admin
-# Register your models here.
 from .models import Project
-# from app.models import Product
 admin.site.register(Project)
 ```
 
-#### model options
+With `django_extensions` lib, this can be done automatically with `python manage.py admin_generator <<app_name>>`
 
-<div align="center">
-<img src="img/blankvsnull.jpg" alt="blankvsnull.jpg" width="700px">
-</div>
+> How to delete a single table:
 
-### Install PostgreSQL
-
-[https://www.geeksforgeeks.org/how-to-use-postgresql-database-in-django/](https://www.geeksforgeeks.org/how-to-use-postgresql-database-in-django/)
-
-To get Python working with Postgres, you will need to install the “psycopg2” module.
-
-```bash
-pip install psycopg2
-```
-
-open the `settings.py` file
-
-now change database settings with this template code
-
-```python
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'db_name',
-        'USER': 'postgres',
-        'PASSWORD': 'pass',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
-}
-```
-
-Run these commands:
-
-```bash
-python manage.py makemigrations
-python manage.py migrate
-```
-
-To show the list of tables with the corresponding schema name in PgSql, run this statement:
-
-```sql
-SELECT * FROM information_schema.tables where table_schema = 'public';
-```
+- Remove `<YourDeleteTable>` model from `models.py` file
+- Remove `<YourDeleteTable>` class from `admin.py` file and ALL other instances of wherever this class is used.
+- python `manage.py makemigrations <<your app>>`
+- python `manage.py migrate`
 
 ## Relationships
 
 ### One-to-Many
 
+In this type of relationship, a single object of one class can be associated with multiple objects of another class. For example, a single product can have multiple reviews. We know that is SQL we can create a one-to-many relationship **by adding a foreign key in the table of the many side.**
+
 <div align="center">
 <img src="img/1-m.jpg" alt="OneToMany.jpg" width="1000px">
 </div>
 
-```python
-from django.db import models
-import uuid
+```sql
+-- Product Table
+CREATE TABLE Product (
+    ProductID INT PRIMARY KEY,
+    ProductName VARCHAR(255),
+    Price DECIMAL(10, 2)
+);
 
-class Product(models.Model):
-    id = models.UUIDField(
-        primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    title = models.CharField(max_length=200)
-    description = models.TextField()
-    price = models.DecimalField(max_digits=6, decimal_places=2)
-    inventory = models.IntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+-- Review Table
+CREATE TABLE Review (
+    ReviewID INT PRIMARY KEY,
+    ProductID INT,
+    Rating INT,
+    Comment TEXT,
+    FOREIGN KEY (ProductID) REFERENCES Product(ProductID)
+);
 
-    def __str__(self):
-        return self.title
+-- Insert Product Data
+INSERT INTO Product (ProductID, ProductName, Price) VALUES
+(1, 'iPhon 15 pro', 999.99),
+(2, 'Samsung A50', 499.99);
 
-# One `Product` can have Many `Reviews`
-# One `Review` can only belong to one `Product`
-
-class Review(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
-    # above line will create 'product_id' column in Review table
-
-    # `related_name` reverse relation
-    # p = Product.objects.get(title="Apple iPhone 12 Pro Max")
-    # p.review_set.all() # X -without `related_name` X
-    # p.reviews.all()
-    VOTE_CHOICES = (
-        ('up', 'UP VOTE'),
-        ('down', 'DOWN VOTE'),
-    )
-    body = models.TextField(null=True, blank=True)
-    vote = models.CharField(max_length=10, choices=VOTE_CHOICES, default='up')
-    created_at = models.DateTimeField(auto_now_add=True)
-    id = models.UUIDField(default=uuid.uuid4, editable=False,
-                          unique=True, primary_key=True)
-
-    def __str__(self):
-        return self.body[:20]
+-- Insert Review Data
+INSERT INTO Review (ReviewID, ProductID, Rating, Comment) VALUES
+(101, 1, 5, 'Great laptop!'),
+(102, 1, 4, 'Good performance'),
+(103, 2, 3, 'Decent smartphone');
 ```
 
-Update `admin.py`:
+Similarly in Django, we can create a one-to-many relationship by adding a `ForeignKey` field **to the model of the many side**.
+
 
 ```python
-from django.contrib import admin
-# Register your models here.
-from .models import Product, Review
-# from app.models import Product, Review
-admin.site.register(Product)
-admin.site.register(Review)
-# ....
+class Product(models.Model):
+    #...
 
+class Review(models.Model):
+    product = models.ForeignKey("Product", on_delete=models.CASCADE, related_name='reviews')
+    body = models.TextField()
+    rating = models.IntegerField()
 ```
 
 ### Many-to-Many
@@ -236,64 +267,80 @@ admin.site.register(Review)
 <img src="img/Django-ORM-Relationship-M-M.jpg" alt="Django-ORM-Relationship-M-M.jpg" width="1000px">
 </div>
 
-```python
-from django.db import models
-import uuid
-# M to M: Product to Tag
+In this type of relationship, a single object of one class can be associated with multiple objects of another class, and vice versa. For example, a product can have multiple tags, and a tag can be associated with multiple products.
 
+In SQL, we can create a many-to-many relationship by creating a third table that holds the primary keys of both the tables.
+
+```sql
+-- Product Table
+CREATE TABLE Product (
+    ProductID INT PRIMARY KEY,
+    ProductName VARCHAR(255),
+    Price DECIMAL(10, 2)
+);
+
+-- Tag Table
+CREATE TABLE Tag (
+    TagID INT PRIMARY KEY,
+    TagName VARCHAR(255)
+);
+
+-- ProductTag Table
+CREATE TABLE ProductTag (
+    ProductID INT,
+    TagID INT,
+    PRIMARY KEY (ProductID, TagID),
+    FOREIGN KEY (ProductID) REFERENCES Product(ProductID),
+    FOREIGN KEY (TagID) REFERENCES Tag(TagID)
+);
+
+-- Insert Product Data
+INSERT INTO Product (ProductID, ProductName, Price) VALUES
+(1, 'iPhon 15 pro', 999.99),
+(2, 'Samsung A50', 499.99);
+
+-- Insert Tag Data
+INSERT INTO Tag (TagID, TagName) VALUES
+(1, 'SmartPhone'),
+(2, 'Mobile');
+
+-- Insert ProductTag Data
+INSERT INTO ProductTag (ProductID, TagID) VALUES
+(1, 1),
+(1, 2),
+(2, 2);
+```
+
+But in Django, we don't need to create a third table. We can create a many-to-many relationship by adding a `ManyToManyField` field **to the model of either side** (follow the logic).
+
+```python
 class Product(models.Model):
-    """
-    Product model
-    """
-    id = models.UUIDField(
-        primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    title = models.CharField(max_length=200)
-    description = models.TextField()
-    price = models.DecimalField(max_digits=6, decimal_places=2)
-    inventory = models.IntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    tags = models.ManyToManyField('Tag', blank=True, related_name='products')
-    #  Tags` instead of Tag because Tag Model is defined later
-    def __str__(self):
-        return self.title
+    #...
+    tags = models.ManyToManyField("Tag", related_name='products')
 
 class Tag(models.Model):
     name = models.CharField(max_length=200)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    id = models.UUIDField(default=uuid.uuid4, editable=False,
-                          primary_key=True, unique=True)
-
-    def __str__(self):
-        return self.name
 ```
 
-Update `admin.py`:
+This says that a product can have multiple tags, and a tag can be associated with multiple products.
+
+In quiring `ManyToManyField` fields:
 
 ```python
-from django.contrib import admin
+# A product can have multiple tags
+p = Product.objects.get(id=1)
+p.tags.all()
 
-# Register your models here.
-from .models import Product, Tag
-# from app.models import Product, Tag
-admin.site.register(Product)
-admin.site.register(Tag)
-# ....
-
+# A tag can be associated with multiple products
+t = Tag.objects.get(id=1)
+t.`products`.all() # as we used `related_name='products'` otherwise `t.product_set.all()`
 ```
 
-## QuerySet
+## CRUD operations
 
 Once you’ve created your data models, Django automatically gives you a database-abstraction API that lets you create, retrieve, update and delete objects.
 
-Basic QuerySet Syntax:
-
-<div align="center">
-<img src="img/Querysets.png" alt="Querysets.jpg" width="1000px">
-</div>
-
-[https://docs.djangoproject.com/en/4.0/topics/db/queries/](https://docs.djangoproject.com/en/4.0/topics/db/queries/)
+- [https://docs.djangoproject.com/en/5.0/topics/db/queries/#](https://docs.djangoproject.com/en/5.0/topics/db/queries/#)
 
 Overview:
 
@@ -783,7 +830,6 @@ class Book(models.Model):
 ```
 
 ## Querying Relationships
-
 
 ### One to Many
 
