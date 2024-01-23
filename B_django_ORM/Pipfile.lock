@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "66ac65478d716dbfa7afda63eff85fccb8e1dbe53ce4570719539e4d6a37aabd"
+            "sha256": "cf49148405f6bb2428743cd095ac7d00da213ad59b2e1859854bc1bfe4422dc2"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -289,6 +289,22 @@
             "markers": "python_version >= '3.5'",
             "version": "==2.0.1"
         },
+        "faker": {
+            "hashes": [
+                "sha256:9abc6decb78dde54cccbad4432431b3caba796bd06950225da158e86c55855d3",
+                "sha256:b649d7b9b03e9e8283506411a56ecef124c8cd8d2bd300d8d7c858fa42350c4e"
+            ],
+            "index": "pypi",
+            "version": "==22.4.0"
+        },
+        "faker-commerce": {
+            "hashes": [
+                "sha256:6eb0a5e7e9dcded86edf96980c56af63bc12f56c3ab860f88eb99a5b53c14073",
+                "sha256:f76bfcac5ba17c68e15fd6d077d98fdff5087d65d015246db99d1b17efe4a3bd"
+            ],
+            "index": "pypi",
+            "version": "==1.0.3"
+        },
         "greenlet": {
             "hashes": [
                 "sha256:01bc7ea167cf943b4c802068e178bbf70ae2e8c080467070d01bfa02f337ee67",
@@ -489,6 +505,14 @@
             ],
             "markers": "python_version >= '3.7'",
             "version": "==2.17.2"
+        },
+        "python-dateutil": {
+            "hashes": [
+                "sha256:0123cacc1627ae19ddf3c27a5de5bd67ee4586fbdd6440d9748f8abb483d3e86",
+                "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"
+            ],
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
+            "version": "==2.8.2"
         },
         "pyxdg": {
             "hashes": [

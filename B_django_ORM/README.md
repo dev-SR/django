@@ -11,27 +11,26 @@
     - [Inserting Data - `save()`](#inserting-data---save)
     - [Retrieving Data](#retrieving-data)
       - [Retrieving all objects - `all()`](#retrieving-all-objects---all)
+      - [Selecting specific fields with `values()`](#selecting-specific-fields-with-values)
       - [Retrieving a single object with `get(attribute='value')`](#retrieving-a-single-object-with-getattributevalue)
       - [Limiting QuerySets `all()[offset:offset+limit]`](#limiting-querysets-alloffsetoffsetlimit)
-      - [Field lookups - mimic `WHERE` clause](#field-lookups---mimic-where-clause)
+      - [Filtering by field lookups](#filtering-by-field-lookups)
         - [`Or` condition with `Q` objects](#or-condition-with-q-objects)
         - [`exclude()`](#exclude)
     - [Updating Data](#updating-data)
     - [Deleting Data](#deleting-data)
     - [Aggregation \& Ordering](#aggregation--ordering)
-  - [Rendering Queried Data in the Template](#rendering-queried-data-in-the-template)
-    - [Model Urls](#model-urls)
-      - [Manually](#manually)
-      - [Using `reverse`](#using-reverse)
-  - [Slugify before saving](#slugify-before-saving)
-    - [Using the Slug in the URL](#using-the-slug-in-the-url)
-  - [Querying Relationships](#querying-relationships)
-    - [One to Many](#one-to-many-1)
-      - [query `Many` side of `One to Many` relation](#query-many-side-of-one-to-many-relation)
-      - [query `One` side of `One to Many` relation](#query-one-side-of-one-to-many-relation)
-    - [Many to Many](#many-to-many-1)
-      - [Query Many to Many fields](#query-many-to-many-fields)
-      - [Add Many to Many Field](#add-many-to-many-field)
+    - [Deferring Fields](#deferring-fields)
+  - [CRUD operations with Relationships](#crud-operations-with-relationships)
+    - [Creating records for a one-to-many relation](#creating-records-for-a-one-to-many-relation)
+      - [Creating records with many-to-many relationships](#creating-records-with-many-to-many-relationships)
+      - [Querying using foreign keys | get many side of one-to-many relation](#querying-using-foreign-keys--get-many-side-of-one-to-many-relation)
+      - [Querying using the model name | get one side of one-to-many relation](#querying-using-the-model-name--get-one-side-of-one-to-many-relation)
+      - [Querying across foreign key relationships using the object instance](#querying-across-foreign-key-relationships-using-the-object-instance)
+      - [querying across a many-to-many relationship using the field lookup](#querying-across-a-many-to-many-relationship-using-the-field-lookup)
+      - [a many-to-many query using objects](#a-many-to-many-query-using-objects)
+  - [Annotations and Grouping](#annotations-and-grouping)
+  - [Transaction Management](#transaction-management)
 
 ## Database configuration
 
@@ -122,7 +121,7 @@ For primary keys, Django provides the following field types:
 For relationships, Django provides the following field types:
 
 - `🟠ForeignKey(to, on_delete, **options)` : Establishes a many-to-one relationship with another model.
-- `🟠ManyToManyField(to, **options)` : Creates a many-to-many relationship with another model.
+- `🟠ManyToManyField(to,through, **options)` : Creates a many-to-many relationship with another model.
 
 There are some **field options** that can be used to customize the field behavior:
 
@@ -137,7 +136,7 @@ There are some **field options** that can be used to customize the field behavio
 7. `default`: The default value for the field.
 8. `auto_now`: Automatically set the field to now every time the object is saved. Useful for “last-modified” timestamps. The default value is False.
 9. `auto_now_add`: Automatically set the field to now when the object is first created. Useful for creation of timestamps. The default value is False.
-
+10. `through`: Creates a many-to-many relationship using an intermediate model. The default value is None.
 
 **Not Database Specific:**
 
@@ -187,6 +186,8 @@ class Product(models.Model):
 ```bash
 python manage.py makemigrations
 python manage.py migrate
+# in case of "no changes detected" error run:
+python manage.py makemigrations name
 ```
 
 > Register Model for Admin site
@@ -199,14 +200,7 @@ from .models import Project
 admin.site.register(Project)
 ```
 
-With `django_extensions` lib, this can be done automatically with `python manage.py admin_generator <<app_name>>`
-
-> How to delete a single table:
-
-- Remove `<YourDeleteTable>` model from `models.py` file
-- Remove `<YourDeleteTable>` class from `admin.py` file and ALL other instances of wherever this class is used.
-- python `manage.py makemigrations <<your app>>`
-- python `manage.py migrate`
+With `django_extensions` lib, this can be done automatically with `python manage.py admin_generator <<name>>`
 
 ## Relationships
 
@@ -323,22 +317,48 @@ class Tag(models.Model):
 
 This says that a product can have multiple tags, and a tag can be associated with multiple products.
 
-In quiring `ManyToManyField` fields:
+Also, we can create a many-to-many relationship with an intermediate model. For example, we can create a many-to-many relationship between the `Product` and `Attribute` models using the `ProductAttribute` model as an intermediate model.
+
 
 ```python
-# A product can have multiple tags
-p = Product.objects.get(id=1)
-p.tags.all()
+class Product(models.Model):
+    title = models.CharField(max_length=200, unique=True)
+    attributes = models.ManyToManyField(
+        "Attribute", related_name="products", through="ProductAttribute")
 
-# A tag can be associated with multiple products
-t = Tag.objects.get(id=1)
-t.`products`.all() # as we used `related_name='products'` otherwise `t.product_set.all()`
+class Attribute(models.Model):
+    name = models.CharField(max_length=200, unique=True)
+
+class ProductAttribute(models.Model):
+    product = models.ForeignKey(
+        "Product", on_delete=models.CASCADE, related_name="product_attributes")
+    attribute = models.ForeignKey(
+        "Attribute", on_delete=models.CASCADE, related_name="product_attributes")
 ```
+
+Downside to this approach is that we need extra efforts in creating and managing the intermediate model. Additionally, we need to configure the ability to add attributes from product admin page with `admin.StackedInline` or `admin.TabularInline`.Which in case of the many-to-many relationship without an intermediate model is done automatically - i.e. Tag can be added to Product from Product admin page by default.
+
+```python
+from .models import Product, ProductAttribute
+class ProductAttributeInline(admin.TabularInline):
+    model = ProductAttribute
+    extra = 1  # Number of empty forms to show for adding attributes
+    autocomplete_fields = ['attribute']
+
+
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    list_display = ( 'id', 'title',)
+    list_display_links = ('id', 'title')
+    inlines = [ProductAttributeInline]
+```
+
 
 ## CRUD operations
 
 Once you’ve created your data models, Django automatically gives you a database-abstraction API that lets you create, retrieve, update and delete objects.
 
+- [https://docs.djangoproject.com/en/5.0/ref/models/querysets/#](https://docs.djangoproject.com/en/5.0/ref/models/querysets/#)
 - [https://docs.djangoproject.com/en/5.0/topics/db/queries/#](https://docs.djangoproject.com/en/5.0/topics/db/queries/#)
 
 Overview:
@@ -371,6 +391,35 @@ product.price = 100
 product.save()
 ```
 
+> Additionally, you can use `create()`, `bulk_create()` and `get_or_create()` methods to create objects.
+
+example seeding database with faker:
+
+```python
+from faker import Faker
+import faker_commerce
+# https://github.com/nicobritos/python-faker-commerce/blob/main/faker_commerce/__init__.py
+
+def run():
+    fake = Faker()
+    fake.add_provider(faker_commerce.Provider)
+    print("Deleting all products")
+    Product.objects.all().delete()
+    print("Creating new products")
+    for _ in range(20):
+        try:
+            product = Product()
+            product.title = fake.ecommerce_name()
+            product.description = fake.sentence(nb_words=20)
+            product.price = fake.random_int(min=100, max=1000)
+            product.status = fake.random.choice(
+                [Product.Status.ACTIVE, Product.Status.INACTIVE])
+            product.save()
+            print(f"Saved {product.title}")
+        except Exception:
+            pass
+```
+
 ### Retrieving Data
 
 #### Retrieving all objects - `all()`
@@ -382,6 +431,17 @@ from app.models import Product
 
 products = Product.objects.all()
 print(list(products))
+
+```
+
+#### Selecting specific fields with `values()`
+
+```python
+Product.objects.values('title', 'price')
+# SELECT "title","price". ...
+
+Product.objects.values('title', 'price').distinct()
+# SELECT DISTINCT "title","price" ...
 ```
 
 #### Retrieving a single object with `get(attribute='value')`
@@ -429,15 +489,13 @@ This returns the sixth through tenth objects (OFFSET 2, LIMIT 3):
 Product.objects.all()[2:5] # 5 - OFFSET 2 = LIMIT 3
 ```
 
-#### Field lookups - mimic `WHERE` clause
+#### Filtering by field lookups
 
-Field lookups are how you specify the meat of an SQL `WHERE` clause. They’re specified as keyword arguments to the QuerySet methods `filter()`, `exclude()` and `get()`.
+Field lookups are how you specify the meat of an SQL `WHERE` clause. They’re specified as keyword arguments to the QuerySet methods `filter()`, `exclude()` and `get()`. In such a case, we can use a **double-underscore lookup**. Basic lookups keyword arguments take the form `field__lookuptype=value`. For example:
 
 <div align="center">
 <img src="img/filter.jpg" alt="filter.jpg" width="800px">
 </div>
-
-Basic lookups keyword arguments take the form `field__lookuptype=value`. (That’s a `double-underscore`). For example:
 
 ```python
 def run(*arg):
@@ -596,374 +654,616 @@ AND NOT headline = 'Hello'
 product1 = Product.objects.get(pk=1)
 product1.title = "Product 2"
 product1.save()
+# v2
+Product.objects.filter(pk=1).update(title="Product 3")
+```
+
+Bulk update:
+
+```python
+products_in_book_category = Product.objects.filter(category__name='Book')
+
+# Create a list of Product objects with updated titles
+updated_products = [
+    Product(pk=product.pk, title=f"{product.title} | Book")
+    for product in products_in_book_category
+]
+
+# Use bulk_update to update all products in a single query
+Product.objects.bulk_update(updated_products, ['title'])
 ```
 
 ### Deleting Data
 
 ```python
-product1 = Product.objects.get(pk=1)
-product1.delete()
+Product.objects.get(pk=1).delete()
+Product.objects.all().delete()
 ```
 
 ### Aggregation & Ordering
 
 ```python
-Book.objects.all()
-# <QuerySet [<Book: Official Ielts Practice Materials>,
-# <Book: Harry Potter 1 - The Philoshoper'S Stone>, <Book: Lord Of The Rings>,
-# <Book: Programming And Problem Solving With C>, <Book: Barron’S Ielts Superpack>]>
-Book.objects.all().order_by("-title")
-# <QuerySet [<Book: Programming And Problem Solving With C>,
-# <Book: Official Ielts Practice Materials>, <Book: Lord Of The Rings>,
-#  <Book: Harry Potter 1 - The Philoshoper'S Stone>, <Book: Barron’S Ielts Superpack>]>
-from django.db.models import Avg,Min,Max
-Book.objects.all().aggregate(Avg("rating"))
-# {'rating__avg': 4.0}
-Book.objects.all().aggregate(Min("rating"))
-# {'rating__min': 3}
-Book.objects.all().aggregate(Max("rating"))
-# {'rating__max': 5}
+Product.objects.order_by('status', '-price')
+# SELECT * FROM "product"
+#  ORDER BY "product"."status" ASC,
+#           "product"."price" DESC
+Product.objects.order_by('status', '-price').reverse()
+#  ORDER BY "product"."status" DESC,
+#           "product"."price" ASC
 ```
 
-## Rendering Queried Data in the Template
+```python
+from django.db.models import Avg,Min,Max,Count
 
-`app/view.py`
+reviewInfo = Review.objects.aggregate(Count("rating"), Avg("rating"), Min("rating"), Max("rating"))
+print(reviewInfo) # {'rating__count': 43, 'rating__avg': 2.7674418604651163, 'rating__min': 1, 'rating__max': 5}
+
+# SELECT COUNT("review"."rating") AS "rating__count",
+#        AVG("review"."rating") AS "rating__avg",
+#        MIN("review"."rating") AS "rating__min",
+#        MAX("review"."rating") AS "rating__max"
+#   FROM "review
+```
+
+### Deferring Fields
+
+In Django, the `defer()` method is used to defer the loading of certain fields in a query until they are specifically requested. This can be useful for optimizing database queries by avoiding the unnecessary loading of large or less frequently used fields.
+
+Suppose you want to defer loading the `description` field when querying for `Product` instances. You can do this as follows:
+
 
 ```python
-from django.shortcuts import render
-from .models import Book
-# Create your views here.
+# Query to get products with deferred 'description' field
+products = Product.objects.defer('description').all()
 
-def index(request):
-    books = Book.objects.all()
-    context = {
-        'books': books
+# Accessing the 'title' and 'price' fields will not trigger a new database query
+for product in products:
+    print(product.title, product.price)
+
+# Accessing the 'description' field will trigger a new database query for `each` product
+for product in products:
+    print(product.description)
+```
+
+In this example, the description field is deferred, so when initially querying for Product instances, the data for the description field is not loaded. Only when you explicitly access the deferred field will a new query be made to fetch the data.
+
+On the other hand, the `only()` method is used to retrieve only the specified fields in a query. It is the **opposite of** `defer()`. Here's how you might use `only()`:
+
+
+```python
+products = Product.objects.only('title', 'price').all() # opposite of `defer()`
+
+# Accessing 'title' and 'price' will not trigger a new database query
+for product in products:
+    print(product.title, product.price)
+
+# Accessing 'description' or any other field will trigger a new database query for each product
+for product in products:
+    print(product.description)
+```
+
+## CRUD operations with Relationships
+
+- [https://docs.djangoproject.com/en/5.0/topics/db/examples/many_to_one/](https://docs.djangoproject.com/en/5.0/topics/db/examples/many_to_one/)
+- [https://docs.djangoproject.com/en/5.0/topics/db/examples/many_to_many/](https://docs.djangoproject.com/en/5.0/topics/db/examples/many_to_many/)
+
+### Creating records for a one-to-many relation
+
+- [db/queries/#saving-foreignkey-and-manytomanyfield-fields](https://docs.djangoproject.com/en/5.0/topics/db/queries/#saving-foreignkey-and-manytomanyfield-fields)
+
+Creating a record for a one-to-many relationship is very similar to creating a record for a simple model. **The only difference is that we need to associate the record with the parent model before saving it.**
+
+```python
+product, isCreated = Product.objects.get_or_create(
+    title="Product 1", price=1000,)
+
+review = Review()
+review.product = product
+review.body = "This is a new review"
+review.rating = 5
+review.save()
+
+# or
+Review.objects.create(product=product, body="This is a new review", rating=5)
+```
+
+Creating multiple records at once using `bulk_create()`:
+
+```python
+# Create a Product
+product = Product.objects.create(
+    title="Sample Product",
+    description="A sample product description.",
+    price=99.99,
+    status=Product.Status.ACTIVE
+)
+
+# Create multiple Reviews for the Product
+reviews_data = [
+    {
+        'body': "Great product!",
+        'rating': 5,
+    },
+    {
+        'body': "Good value for money.",
+        'rating': 4,
+    },
+    {
+        'body': "Could be better.",
+        'rating': 3,
     }
-    return render(request, 'app/index.html', context)
-```
-
-`app/templates/app/index.html`
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
- <meta charset="UTF-8">
- <meta http-equiv="X-UA-Compatible" content="IE=edge">
- <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>Document</title>
-</head>
-<body>
- <ul>
-  {% for book in books %}
-   <li>
-    {{book.title}} (Ratings: {{book.rating}})
-   </li>
-  {% endfor %}
- </ul>
-</body>
-</html>
-```
-
-### Model Urls
-
-#### Manually
-
-`app/views.py`
-
-```python
-def book_detail(request, id):
-    # try:
-    #     book = Book.objects.get(id=id)
-    # except:
-    #     raise Http404('Book does not exist')
-    book = get_object_or_404(Book, id=id)
-    context = {
-        'title': book.title,
-        'author': book.author,
-        'rating': book.rating,
-    }
-    return render(request, 'app/book_detail.html', context)
-```
-
-`app/templates/app/book_detail.html`
-
-```html
- <h3><a href="{% url 'index' %}">Go Home</a></h3>
- <h1>{{title}}</h1>
- <h3> - Author: {{author}}</h3>
- <h3> - Avg. Rating: {{rating}}</h3>
-```
-
-`app/urls.py`
-
-```python
-from django.urls import path
-from . import views
-urlpatterns = [
-    path('', views.index, name='index'),
-    path('books/<int:id>', views.book_detail, name='book-details'),
 ]
+
+# Create Review instances and associate them with the Product
+reviews_instances = [Review(product=product, **review_data)
+                        for review_data in reviews_data]
+Review.objects.bulk_create(reviews_instances)
 ```
 
-`app/templates/app/index.html`
+#### Creating records with many-to-many relationships
 
-```html
-<ul>
-  {% for book in books %}
-   <li>
-   <!-- manual url link -->
-    <a href="{% url 'book-details' book.id %}">{{book.title}} </a>
-    (Ratings: {{book.rating}})
-   </li>
-  {% endfor %}
- </ul>
-```
-
-#### Using `reverse`
-
-`app/urls.py`
+Updating a ManyToManyField works a little differently – use the `add()` or `set()` methods to create relationships:
 
 ```python
-from django.urls import path
-from . import views
-urlpatterns = [
-    path('', views.index, name='index'),
-    path('books/<int:id>', views.book_detail, name='book-details'),
+# Create a Product
+product = Product.objects.create(
+    title="Sample Product xx",
+    description="A sample product description.",
+    price=99.99,
+    status=Product.Status.ACTIVE
+)
+
+tags_data = [
+    {'name': 'Electronics'},
+    {'name': 'Gadgets'},
+    {'name': 'Tech'},
 ]
+# Create Tag instances
+tags_instances = [Tag.objects.create(**tag_data) for tag_data in tags_data]
+# 1. Associate the tags with the product using set() method
+product.tags.set(tags_instances)
+# or
+# 2. Associate the tags with the product using add() method
+for tag_instance in tags_instances:
+    product.tags.add(tag_instance)
 ```
 
-`app/models.py`
+If we would have crated an intermediate model for the many-to-many relationship, we would have to create an instance of the intermediate model and associate it with the parent model and the child model. For example , consider the following models:
 
 ```python
-from django.urls import reverse
+class Product(models.Model):
+    title = models.CharField(max_length=200, unique=True)
+    attributes = models.ManyToManyField(
+        "Attribute", related_name="products", through="ProductAttribute")
 
-class Book(models.Model):
-    title = models.CharField(max_length=200)
-    rating = models.IntegerField(default=0)
-    author = models.CharField(max_length=200)
-    is_bestseller = models.BooleanField(default=False)
+class Attribute(models.Model):
+    name = models.CharField(max_length=200, unique=True)
 
-    # Model Url
-    def get_absolute_url(self):
-        # return reverse('book-details', kwargs={'pk': self.pk})
-        return reverse('book-details', args=[self.pk])
-
-    def __str__(self):
-        return self.title.title()
-```
-
-`app/templates/app/index.html`
-
-```html
-<ul>
-  {% for book in books %}
-   <li>
-    <!-- <a href="{% url 'book-details' book.id %}">{{book.title}} </a>  -->
-    <a href="{{ book.get_absolute_url}}">{{book.title}} </a>
-    (Ratings: {{book.rating}})
-   </li>
-  {% endfor %}
- </ul>
-```
-
-## Slugify before saving
-
-A slug is a human-readable, unique identifier, used to identify a resource instead of a less human-readable identifier like an id. You use a slug when you want to refer to an item while preserving the ability to see, at a glance, what the item is.
-
-- Typically slugs are used when making `search-engine optimized(SEO)` urls
-
-<div align="center">
-<img src="img/slug.jpg" alt="slug.jpg" width="800px">
-</div>
-
-```python
-from django.utils.text import slugify
-
-class Book(models.Model):
-    title = models.CharField(max_length=200)
-    rating = models.IntegerField(default=0)
-    author = models.CharField(max_length=200)
-    is_bestseller = models.BooleanField(default=False)
-    slug = models.SlugField(default="", null=False, blank=False)
-
-    # slugify before save()
-    def save(self, *args, **kwargs):
-        self.slug = slugify(self.title)
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.title.title()
-```
-
-```python
-Book.objects.get(title="Official IELTS Practice Materials").save()
-Book.objects.get(title="Official IELTS Practice Materials").slug
-# 'official-ielts-practice-materials'
-```
-
-### Using the Slug in the URL
-
-`app/urls.py`
-
-```python
-from django.urls import path
-from . import views
-urlpatterns = [
-    path('', views.index, name='index'),
-    path('books/<int:id>', views.book_detail, name='book-details'),
-]
-```
-
-`app/views.py`
-
-```python
-def book_detail(request, s):
-    # try:
-    #     book = Book.objects.get(id=id)
-    # except:
-    #     raise Http404('Book does not exist')
-    book = get_object_or_404(Book, slug=s)
-    context = {
-        'title': book.title,
-        'author': book.author,
-        'rating': book.rating,
-    }
-    return render(request, 'app/book_detail.html', context)
-```
-
-```python
-from django.utils.text import slugify
-
-class Book(models.Model):
-    title = models.CharField(max_length=200)
-    rating = models.IntegerField(default=0)
-    author = models.CharField(max_length=200)
-    is_bestseller = models.BooleanField(default=False)
-    slug = models.SlugField(default="", null=False, blank=False)
-
-    # slugify before save()
-    def save(self, *args, **kwargs):
-        self.slug = slugify(self.title)
-        super().save(*args, **kwargs)
-
-    # Model Url
-    # def get_absolute_url(self):
-    #     return reverse('book-details', args=[self.pk])
-    def get_absolute_url(self):
-        return reverse('book-details', args=[self.slug])
-
-    def __str__(self):
-        return self.title.title()
-```
-
-## Querying Relationships
-
-### One to Many
-
-#### query `Many` side of `One to Many` relation
-
-```python
-# Review-M
-# Product-1
-
-# get all reviews of Product="Apple iPhone 12 Pro Max"
-Review.objects.filter(product__title="Apple iPhone 12 Pro Max")
-    # <QuerySet [<Review: Not good>, <Review: Very Avg...>]>
-
-
-# get a review's associated product
-a_good_review = Review.objects.filter(body__icontains="good")[0]
-a_good_review
-    # <Review: Not good>
-a_good_review.product
-    # <Product: Apple iPhone 12 Pro Max>
-a_good_review.product.title
-    # 'Apple iPhone 12 Pro Max'
-
-# save Product with review
-from app.models import Product, Review
-p = Product(title="Samsung Galaxy S10", price=1000,description="Samsung Galaxy S10")
-p.save()
-r = Review(body="best android phone", product = p)
-r.save()
-r = Review(body="best android phone for 2020", product = p)
-r.save()
-```
-
-#### query `One` side of `One to Many` relation
-
-If we don't specify a `related_name`, Django automatically creates one using the name of our model with the suffix `_set`, for instance `product.review_set.all()`.
-
-```python
-# Product - 1
-# Review - M
-# get all reviews of Product="Apple iPhone 12 Pro Max"
-from app.models import Product,Review
-p = Product.objects.get(title="Apple iPhone 12 Pro Max")
-p.review_set.all()
-    # <QuerySet [<Review: Not good>, <Review: Very Avg...>]>
-```
-
-The `related_name` attribute specifies the name of the `reverse` relation from the `Review` model back to `Product` model.
-
-Defining a `related_name` attribute on the `Review` model (many side) allows us to use the `reverse` relation to access the `Review` objects that belong to an `Product` object.
-
-```python
-class Review(models.Model):
-    # ........
+class ProductAttribute(models.Model):
     product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name='reviews')
-    # ......
+        "Product", on_delete=models.CASCADE, related_name="product_attributes")
+    attribute = models.ForeignKey(
+        "Attribute", on_delete=models.CASCADE, related_name="product_attributes")
 ```
 
-Run these commands:
+Here, we need to create an instance of the `ProductAttribute` model and associate it with the `Product` and `Attribute` models:
 
 ```python
-python manage.py makemigrations
-python manage.py migrate
+from django.utils import timezone
+from your_app.models import Product
+
+# Create a Product
+product = Product.objects.create(
+    title="Sample Product",
+    description="A sample product description.",
+    price=99.99,
+    status=Product.Status.ACTIVE
+)
+
+# Create multiple Attributes
+attributes_data = [
+    {'name': 'Color'},
+    {'name': 'Size'},
+    {'name': 'Weight'},
+]
+
+# Create Attribute instances
+attributes_instances = [Attribute.objects.create(**attribute_data) for attribute_data in attributes_data]
+
+# Associate the Attributes with the Product using the ProductAttribute intermediate table
+for attribute_instance in attributes_instances:
+    ProductAttribute.objects.create(product=product, attribute=attribute_instance, value="Sample Value")
+
+# Print information
+print(f"Product created: {product}")
+print("Attributes associated with the product:")
+for product_attribute in product.product_attributes.all():
+    print(f"Attribute: {product_attribute.attribute}, Value: {product_attribute.value}")
 ```
 
-Now we can access the `Book` objects that belong to an `Author` object using the `reverse` relation.
+#### Querying using foreign keys | get many side of one-to-many relation
+
+When we have relationships across two models/tables, Django provides a way to perform a query using the relationship.
+
+Similar to what we’ve seen previously, this is done using the double-underscore lookup. For example, the `Product` model has a foreign key of `category` pointing to the `Category` model.
 
 ```python
-p = Product.objects.get(title="Apple iPhone 12 Pro Max")
-p.reviews.all()
-# <QuerySet [<Review: Not good>, <Review: Very Avg...>]>
-p.reviews.filter(body__icontains='good')
-# <QuerySet [<Review: Not good>]>
+class Category (models.Model):
+    name = models.CharField(max_length=250, unique=True)
+
+class Product(models.Model):
+    title = models.CharField(max_length=200, unique=True)
+    category = models.ForeignKey(
+        "Category", on_delete=models.CASCADE, related_name="products")
 ```
 
-### Many to Many
-
-#### Query Many to Many fields
+Using this foreign key, we can perform a query **using double underscores and the name field in the `Category` model**. This can be seen from the following code:
 
 ```python
-tag = Tag.objects.get(name="SmartPhone")
-tag.products.all()
-# <QuerySet [<Product: Apple iPhone 12 Pro Max>, <Product: Google Pixel>, <Product: Apple iPhone 11 Pro, 64GB>]>
-tag.products.filter(title__icontains='pixel')
-# <QuerySet [<Product: Google Pixel>]>
+category1_products = Product.objects.filter(category__name="Smartphone")
+print(category1_products) # <QuerySet [<Product: Product 1>, <Product: Product 2>], ...>
 
+# SELECT "product"."*"
+#   FROM "product"
+#  INNER JOIN "category"
+#     ON ("product"."category_id" = "category"."id")
+#  WHERE "category"."name" = '''Smartphone'''
 
-p = Product.objects.get(title="Apple iPhone 12 Pro Max")
-p.tags.all()
-# <QuerySet [<Tag: SmartPhone>, <Tag: Mobile>]>
+category1_products = Product.objects.filter(category__pk=1)
+print(category1_products) # <QuerySet [<Product: Product 1>, <Product: Product 2>], ...>
 ```
 
-#### Add Many to Many Field
+#### Querying using the model name | get one side of one-to-many relation
 
-<div align="center">
-<img src="img/file_name" alt="file_name" width="800px">
-</div>
+Another way of querying is using a relationship to do the query backward, using the model name in lowercase. For example we can query the `Product` model using the `Category` model as follows:
 
 ```python
-# add new tag
-p = Product.objects.get(title="Apple iPhone 12 Pro Max")
-t = Tag.objects.create(name="Apple")
-p.tags.add(t)
-# existing tag
-p = Product.objects.get(title="Apple iPhone 12 Pro Max")
-t = Tag.objects.get(name="iphone")
-p.tags.add(t)
+Category.objects.get(products__id=1)
+# <Category: Smartphone>
+```
+
+#### Querying across foreign key relationships using the object instance
+
+We can also retrieve the information using the object’s foreign key. Suppose we want to query the category name for the  the product 1.
+
+```python
+product = Product.objects.get(id=1)
+print(product.category)
+```
+
+But beware this will trigger a new database query.
+
+```sql
+SELECT "product"."*", "product"."category_id" -- let's say cat_id 3 is returned
+FROM "product"
+WHERE "product"."id" = '1'
+
+SELECT *
+FROM "category"
+WHERE "category"."id" = '3' -- second query is made with cat_id 3 to get the category
+```
+
+To avoid this, we can use the `select_related()` method to retrieve the information using the object’s foreign key. select_related is used to perform SQL **join** and retrieve related objects in a single query. It’s **most effective** when you have a `ForeignKey` or a `OneToOneField` in your model.
+
+```python
+product = Product.objects.select_related("category").get(id=1)
+print(product.category)
+```
+
+```sql
+SELECT "product"."*"
+  FROM "product"
+ INNER JOIN "category"
+    ON ("product"."category_id" = "category"."id")
+ WHERE "product"."id" = '1'
+```
+
+Similarly, we use the reverse direction to get all the product information for a category using `
+
+```python
+category = Category.objects.get(pk=5)
+print(category.products.all())
+```
+
+Although there is no 'products' field in the `Category` model, Django will automatically create one using the name of the model with the suffix `_set`, but since we have specified a `related_name`, Django will use that instead.
+
+Again this `category.products.all()` will trigger a new database query.
+
+```sql
+SELECT *
+  FROM "category"
+ WHERE "category"."id" = '5'
+
+SELECT "product"."*"
+  FROM "product"
+    WHERE "product"."category_id" = '5'
+```
+
+To avoid this, we can use the `prefetch_related()` method to retrieve the information using the object’s foreign key. `prefetch_related` is used when optimizing queries with `many-to-many` and `reverse` foreign key relationships. It performs **two separate queries**, one for the main object and one for the related objects.
+
+```python
+category = Category.objects.prefetch_related("products").get(pk=5)
+print(category.products.all())
+```
+
+Unlike `selected_related`, `prefetch_related` performs two separate queries, one for the main object and one for the related objects.
+
+```sql
+SELECT *
+  FROM "category"
+ WHERE "category"."id" = '5'
+
+SELECT "product"."*"
+  FROM "product"
+    WHERE "product"."category_id" IN ('5')
+```
+
+This may seems similar to making queries without `prefetch_related`, but the difference is that `prefetch_related` will make the second query using the `IN` statement, which is more efficient than making a separate query for each object.
+
+The real benefit of `prefetch_related` is revealed when we have a `many-to-many` relationship. or when we have a `reverse` foreign key relationship. For example, consider the following models:
+
+```python
+categories = Category.objects.prefetch_related('products').all()
+for category in categories:
+    print(category.products.all())
+```
+
+```sql
+SELECT *
+  FROM "category"
+
+SELECT "product"."*"
+  FROM "product"
+    WHERE "product"."category_id" IN ('5', '6', '7')
+```
+
+As we can see, prefetch is implemented using the `IN` statement. In this way, when there are too many objects in QuerySet, performance problems may arise depending on the characteristics of the database.
+
+In short, `select_related` is used when optimizing queries with `ForeignKey` and `OneToOneField` relationships, and `prefetch_related` is used when optimizing queries with `ManyToManyField` and `reverse` foreign key relationships.
+
+
+```python
+class ModelA(models.Model):
+    pass
+
+class ModelB(models.Model):
+    fk = models.ForeignKey(ModelA, on_delete=models.CASCADE, related_names="modB")
+
+# Forward ForeignKey relationship
+ModelB.objects.select_related('fk').all()
+
+# Reverse ForeignKey relationship
+ModelA.objects.prefetch_related('modB').all()
+```
+
+
+Here is an example combining two:
+
+```python
+class Product(models.Model):
+    title = models.CharField(max_length=200, unique=True)
+
+class Customer(models.Model):
+    name = models.CharField(max_length=200)
+
+class Order(models.Model):
+    customer = models.ForeignKey(
+        "Customer", on_delete=models.CASCADE, related_name="orders")
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(
+        "Order", on_delete=models.CASCADE, related_name="order_items")
+    product = models.ForeignKey(
+        "Product", on_delete=models.CASCADE, related_name="order_items")
+    quantity = models.IntegerField(default=0)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+```
+
+```python
+q = Order.objects.select_related('customer')
+                 .prefetch_related('order_items__product')
+                 .filter(customer__name='Jhon')
+for order in q:
+    for item in order.order_items.all():
+        print(f"{order.customer.name} | {item.product.title} | {item.quantity}")
+```
+
+```sql
+SELECT "order"."order_id",...
+  FROM "order"
+ INNER JOIN "customer"
+    ON ("order"."customer_id" = "customer"."id")
+ WHERE "customer"."name" = '''Jhon'''
+
+SELECT "orderitem"."product_id",...
+  FROM "orderitem"
+ WHERE "orderitem"."order_id" IN ('1')
+
+SELECT "product"."*"
+  FROM "product"
+ WHERE "product"."id" IN ('81', '83', '99')
+```
+
+More:
+
+- [medium.com /optimizing-django-queries-with-select-related-and-prefetch-related](https://medium.com/@baradiyasatish/optimizing-django-queries-with-select-related-and-prefetch-related-22ee02015f72#:~:text=prefetch_related%20is%20used%20when%20optimizing,the%20N%2B1%20query%20problem.)
+- [https://www.geeksforgeeks.org/prefetch_related-and-select_related-functions-in-django/](https://www.geeksforgeeks.org/prefetch_related-and-select_related-functions-in-django/)
+
+
+#### querying across a many-to-many relationship using the field lookup
+
+```python
+class Product(models.Model):
+    title = models.CharField(max_length=200, unique=True)
+    tags = models.ManyToManyField("Tag", related_name="products")
+    attributes = models.ManyToManyField("Attribute", related_name="products", through="ProductAttribute")
+
+class Attribute(models.Model):
+    name = models.CharField(max_length=200, unique=True)
+
+class ProductAttribute(models.Model):
+    product = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="product_attributes")
+    attribute = models.ForeignKey("Attribute", on_delete=models.CASCADE, related_name="product_attributes")
+    value = models.CharField(max_length=200)
+
+class Tag(models.Model):
+    name = models.CharField(max_length=200, unique=True)
+```
+
+```python
+# Query products with a specific tag name
+products = Product.objects.filter(tags__name='Trending')
+print(products)
+
+# SELECT "product"."*"
+#   FROM "product"
+#  INNER JOIN "product_tags"
+#     ON ("product"."id" = "product_tags"."product_id")
+#  INNER JOIN "tag"
+#     ON ("product_tags"."tag_id" = "tag"."id")
+#  WHERE "tag"."name" = '''Trending'''
+
+# Query products with a specific attribute name and value
+products = Product.objects.filter(
+    product_attributes__attribute__name='Color', product_attributes__value='Red')
+print(products)
+
+# SELECT "product"."*"
+#   FROM "product"
+#  INNER JOIN "productattribute"
+#     ON ("product"."id" = "productattribute"."product_id")
+#  INNER JOIN "attribute"
+#     ON ("productattribute"."attribute_id" = "attribute"."id")
+#  WHERE ("attribute"."name" = '''Color''' AND "productattribute"."value" = '''Red''')
+
+product1_tags = Tag.objects.filter(products__id=99)
+print(product1_tags)
+
+# SELECT "tag"."*"
+#   FROM "tag"
+#  INNER JOIN "product_tags"
+#     ON ("tag"."id" = "product_tags"."tag_id")
+#  WHERE "product_tags"."product_id" = '99'
+```
+
+#### a many-to-many query using objects
+
+
+```python
+q = Product.objects.get(pk=1)
+print(q.tags.all())
+```
+
+```python
+product = Product.objects.get(pk=1)
+attributes_and_values = product.product_attributes.values('attribute__name', 'value')
+for item in attributes_and_values:
+    print(f"Attribute: {item['attribute__name']}, Value: {item['value']}")
+
+
+# SELECT "product"."*"
+#   FROM "product"
+#  WHERE "product"."id" = '1'
+
+# SELECT "attribute"."name",
+#        "productattribute"."value"
+#   FROM "productattribute"
+#  INNER JOIN "attribute"
+#     ON ("productattribute"."attribute_id" = "attribute"."id")
+#  WHERE "productattribute"."product_id" = '1'
+```
+
+## Annotations and Grouping
+
+In django, we can use the `annotate()` method to add extra information to each object in the queryset. For example, we can add the total number of order for each customer.
+
+```python
+q = Customer.objects.annotate(order_count=Count('orders'))
+for customer in q:
+    print(f'{customer.name} | order count: {customer.order_count}') # Jhon | order count: 1
+
+SELECT "customer"."id",
+       "customer"."name",
+       "customer"."email",
+       "customer"."phone",
+       "customer"."address",
+       COUNT("order"."id") AS "order_count"
+  FROM "customer"
+  LEFT OUTER JOIN "order"
+    ON ("customer"."id" = "order"."customer_id")
+ GROUP BY "customer"."id",
+          "customer"."name",
+          "customer"."email",
+          "customer"."phone",
+          "customer"."address"
+
+# Nested
+q = Customer.objects.annotate(item_count=Count('orders__order_items'))
+for customer in q:
+    print(customer.name, customer.item_count) # Jhon 3
+
+SELECT "customer"."id",
+       "customer"."name",
+       "customer"."email",
+       "customer"."phone",
+       "customer"."address",
+       COUNT("orderitem"."id") AS "item_count"
+  FROM "customer"
+  LEFT OUTER JOIN "order"
+    ON ("customer"."id" = "order"."customer_id")
+  LEFT OUTER JOIN "orderitem"
+    ON ("order"."id" = "orderitem"."order_id")
+ GROUP BY "customer"."id",
+          "customer"."name",
+          "customer"."email",
+          "customer"."phone",
+          "customer"."address"
+```
+
+## Transaction Management
+
+in Django, we can use the `transaction.atomic()` decorator or the `atomic()` context manager to manage transactions.
+
+```python
+from django.db import models, transaction
+
+class Product(models.Model):
+    title = models.CharField(max_length=200, unique=True)
+    stock = models.IntegerField(default=0)
+
+class Order(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.IntegerField()
+
+# Example of using a transaction to create an order and update product stock
+def create_order(product_id, quantity):
+    try:
+        with transaction.atomic():
+            # Start a transaction
+            product = Product.objects.select_for_update().get(id=product_id)
+            # Use select_for_update to lock the product row for update within the transaction
+
+            # Check if there is enough stock
+            if product.stock >= quantity:
+                # Create an order
+                order = Order(product=product, quantity=quantity)
+                order.save()
+
+                # Update product stock
+                product.stock -= quantity
+                product.save()
+            else:
+                raise ValueError("Not enough stock for the order")
+
+    except Exception as e:
+        # Handle exceptions and rollback the transaction if an error occurs
+        print(f"Error: {e}")
+        transaction.rollback()
+
+# Example usage
+try:
+    create_order(product_id=1, quantity=2)
+except ValueError as e:
+    print(f"Order creation failed: {e}")
+
 ```

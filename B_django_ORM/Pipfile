@@ -12,6 +12,8 @@ ipython = "*"
 bpython = "*"
 werkzeug = "*"
 django-debug-toolbar = "*"
+faker = "*"
+faker-commerce = "*"
 
 [dev-packages]
 
