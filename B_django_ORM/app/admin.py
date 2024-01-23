@@ -1,9 +1,12 @@
 from urllib.parse import urlencode
+
 from django.contrib import admin
-from django.db.models import Q, F, Count, Avg, Min, Max
+from django.db.models import Count
 from django.urls import reverse
-from .models import Category, Product, Review, Attribute, ProductAttribute, Tag, Customer, Order, OrderItem
 from django.utils.html import format_html
+
+from .models import (Attribute, Category, Customer, Order, OrderItem, Product,
+                     ProductAttribute, Review, Tag)
 
 
 class ProductAttributeInline(admin.TabularInline):
@@ -149,25 +152,6 @@ class TagAdmin(admin.ModelAdmin):
     list_filter = ('created_at', 'updated_at')
     search_fields = ('name',)
     date_hierarchy = 'created_at'
-
-    # def get_queryset(self, request):
-    #     qs = super().get_queryset(request)
-    #     qs = qs.annotate(
-    #         products_count=Count('products'),
-    #     )
-    #     return qs
-
-    # @admin.display(ordering='products_count')
-    # def products_count(self, tag):
-    #     # simple
-    #     # return tag.products_count
-    #     # add link
-    #     url = (
-    #         reverse("admin:app_product_changelist")
-    #         + '?' +
-    #         urlencode({'tags__id': str(tag.id)})
-    #     )
-    #     return format_html('<a href="{}">{}</a>', url, tag.products_count)
 
 
 @admin.register(Review)
