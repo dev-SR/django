@@ -1,0 +1,7 @@
+{% extends "_base.html" %}
+{% block content %}
+    <main class="flex flex-col items-center justify-center min-h-screen">
+        <h1 class="text-3xl text-green-800 font-bold">Django + Tailwind CSS + HTMX + others.</h1>
+        <a href={% url 'form_create' %} class="underline text-blue-600">Go to form</a>
+    </main>
+{% endblock content %}

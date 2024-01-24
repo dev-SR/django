@@ -1,0 +1,128 @@
+{% extends "_base.html" %}
+{% block content %}
+    <main class="flex flex-col items-center  min-h-screen">
+        <h1 class="text-3xl text-green-800 font-bold">Form example:</h1>
+        <a href={% url 'index' %} class="underline text-blue-600">Home</a>
+        <form method="post" class="flex flex-col space-y-4">
+            {% csrf_token %}
+            <p>
+                <label for="id_text_input">Text Input</label>
+                <br>
+                <input id="id_text_input"
+                       type="text"
+                       name="text_input"
+                       value=""
+                       placeholder="Enter some text">
+            </p>
+            <p>
+                <label for="id_password_input">Password Input</label>
+                <br>
+                <input id="id_password_input"
+                       type="password"
+                       name="password_input"
+                       value=""
+                       placeholder="Your password">
+            </p>
+            <p>
+                <input id="id_checkbox_input"
+                       type="checkbox"
+                       name="checkbox_on"
+                       value="Checkbox Checked"
+                       checked>
+                <label for="id_checkbox_input">Checkbox</label>
+            </p>
+            <p>
+                <input id="id_radio_one_input"
+                       type="radio"
+                       name="radio_input"
+                       value="Value One">
+                <label for="id_radio_one_input">Value One</label>
+                <input id="id_radio_two_input"
+                       type="radio"
+                       name="radio_input"
+                       value="Value Two"
+                       checked>
+                <label for="id_radio_two_input">Value Two</label>
+                <input id="id_radio_three_input"
+                       type="radio"
+                       name="radio_input"
+                       value="Value Three">
+                <label for="id_radio_three_input">Value Three</label>
+            </p>
+            <p>
+                <label for="id_single_select">Single Select</label>
+                <br>
+                <select id="id_single_select" name="single_select">
+                    <optgroup label="Non-Fiction">
+                        <option value="1">Deep Learning with Keras</option>
+                        <option value="2">Web Development with Django</option>
+                    </optgroup>
+                    <optgroup label="Fiction">
+                        <option value="3">Brave New World</option>
+                        <option value="4">The Great Gatsby</option>
+                    </optgroup>
+                </select>
+            </p>
+            <p>
+                <label for="id_multi_select">Multiple Select</label>
+                <br>
+                <select id="id_multi_select" name="multi_select" multiple>
+                    <optgroup label="Non-Fiction">
+                        <option value="1">Deep Learning with Keras</option>
+                        <option value="2">Web Development with Django</option>
+                    </optgroup>
+                    <optgroup label="Fiction">
+                        <option value="3">Brave New World</option>
+                        <option value="4">The Great Gatsby</option>
+                    </optgroup>
+                </select>
+            </p>
+            <p>
+                <label for="id_text_area">Text Area</label>
+                <br>
+                <textarea name="text_area"
+                          id="id_text_area"
+                          placeholder="Enter multiple lines of text"></textarea>
+            </p>
+            <p>
+                <label for="id_number_input">Number Input</label>
+                <br>
+                <input id="id_number_input"
+                       type="number"
+                       name="number_input"
+                       value=""
+                       step="any"
+                       placeholder="A number">
+            </p>
+            <p>
+                <label for="id_email_input">Email Input</label>
+                <br>
+                <input id="id_email_input"
+                       type="email"
+                       name="email_input"
+                       value=""
+                       placeholder="Your email address">
+            </p>
+            <p>
+                <label for="id_date_input">Date Input</label>
+                <br>
+                <input id="id_date_input" type="date" name="date_input" value="2019-11-23">
+            </p>
+            <p>
+                <input type="submit"
+                       name="submit_input"
+                       value="Submit Input"
+                       class="py-2 px-4 rounded-md bg-indigo-500 text-white hover:bg-indigo-600 ">
+            </p>
+            <p>
+                <button type="submit"
+                        name="button_element"
+                        value="Button Element"
+                        class="py-2 px-4 rounded-md bg-indigo-500 text-white hover:bg-indigo-600 ">
+                    Submit Button
+                </button>
+            </p>
+            <input type="hidden" name="hidden_input" value="Hidden Value">
+        </form>
+    </main>
+{% endblock content %}

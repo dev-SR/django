@@ -1,0 +1,41 @@
+{% extends "_base.html" %}
+{% block content %}
+    <main class="flex flex-col items-center  min-h-screen">
+        <h1 class="text-3xl text-green-800 font-bold">Form example:</h1>
+        <a href={% url 'index' %} class="underline text-blue-600">Home</a>
+        {% include 'form/message.html' %}
+        <form method="post" class="flex flex-col space-y-2">
+            {% csrf_token %}
+            <!-- {{ form.as_table }} -->
+            <!-- {{ form.as_p }} -->
+            {% for field in form %}
+                <div class="flex flex-col">
+                    {% if field.name == 'checkbox_on' %}
+                        <div class="flex items-center space-x-2 w-full">
+                            {{ field }}
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        </div>
+                    {% else %}
+                        {{ field.label_tag }}
+                        {{ field }}
+                    {% endif %}
+                    <div class="text-red-500">{{ field.errors }}</div>
+                </div>
+            {% endfor %}
+            <p>
+                <input type="submit"
+                       name="submit_input"
+                       value="Submit Input"
+                       class="py-2 px-4 rounded-md bg-indigo-500 text-white hover:bg-indigo-600 ">
+            </p>
+            <p>
+                <button type="submit"
+                        name="button_element"
+                        value="Button Element"
+                        class="py-2 px-4 rounded-md bg-indigo-500 text-white hover:bg-indigo-600 ">
+                    Submit Button
+                </button>
+            </p>
+        </form>
+    </main>
+{% endblock content %}

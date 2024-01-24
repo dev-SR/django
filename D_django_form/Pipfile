@@ -5,9 +5,17 @@ name = "pypi"
 
 [packages]
 django = "*"
+django-compressor = "*"
+django-browser-reload = "*"
+django-extensions = "*"
+ipython = "*"
+bpython = "*"
+werkzeug = "*"
+django-debug-toolbar = "*"
+django-widget-tweaks = "*"
+djlint = "*"
 
 [dev-packages]
-autopep8 = "*"
 
 [requires]
-python_version = "3.10"
+python_version = "3.9"
