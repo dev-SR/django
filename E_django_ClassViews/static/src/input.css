@@ -19,7 +19,7 @@
 	select,
 	select[multiple],
 	textarea {
-		@apply border-gray-300 rounded-md;
+		@apply border-gray-300 rounded-md w-full text-black;
 	}
 
 	input[type='checkbox'] {

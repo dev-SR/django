@@ -1,0 +1,8 @@
+{% if object.complete == True %}
+    <h2 class="text-2xl font-bold">
+        <strike>{{ object.title }}</strike>
+    </h2>
+{% else %}
+    <h2 class="text-2xl font-bold">{{ object.title }}</h2>
+{% endif %}
+<a href="{% url 'todo-list' %}" class="underline text-indigo-500">Back to list</a>

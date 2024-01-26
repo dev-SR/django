@@ -12,6 +12,7 @@ ipython = "*"
 bpython = "*"
 werkzeug = "*"
 django-debug-toolbar = "*"
+djlint = "*"
 
 [dev-packages]
 
