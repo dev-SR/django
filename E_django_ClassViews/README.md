@@ -14,6 +14,7 @@
     - [Filtering the queryset](#filtering-the-queryset)
     - [Search and Filtering the queryset using URL parameters](#search-and-filtering-the-queryset-using-url-parameters)
     - [Dynamic search and filtering using htmx](#dynamic-search-and-filtering-using-htmx)
+  - [DetailView + FormMixin/FormView](#detailview--formmixinformview)
 
 **CBVs, or class-based views**, align with object-oriented principles, representing view calls through classes. They offer advantages such as straightforward extensibility and code reuse, simplifying complex tasks compared to FBVs (function-based views).
 
@@ -685,3 +686,68 @@ To make pagination dynamic we need to add the following attributes to the pagina
 - `hx-target="#todo-list"`: This will replace the content of the `#todo-list` element with the response.
 - `hx-push-url="true"`: This will push the url to the browser history.
 - `hx-include="#filter-form"`: This will include the `#filter-form` element in the request, which will preserve the state of the form.
+
+
+## DetailView + FormMixin/FormView
+
+Let's say we are redirecting to the detail view of product, and we want to add a review to that product. Therefore we also need to pass the form to the template.
+
+```python
+class PhotoModel(models.Model):
+    caption = models.CharField(max_length=200, blank=False)
+    image = models.ImageField(upload_to='images', blank=False)
+    created = models.DateTimeField(auto_now_add=True)
+    todo = models.ForeignKey(Todo, on_delete=models.CASCADE, related_name='photos')
+
+    def __str__(self):
+        return self.caption
+
+class PhotoForm(forms.ModelForm):
+    class Meta:
+        model = PhotoModel
+        fields = ['caption', 'image']
+
+# https://docs.djangoproject.com/en/5.0/topics/class-based-views/mixins/#using-formmixin-with-detailview
+class TodoDetailView(FormMixin, DetailView):
+    model = Todo
+    form_class = PhotoForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = self.get_form()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        # if not request.user.is_authenticated:
+        #     return HttpResponseForbidden()
+        self.object = self.get_object()  # !Important as it is used in form validation process,get_success_url
+        form = self.get_form()
+
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+
+    def form_valid(self, form):
+        photo = form.save(commit=False)
+        photo.todo = self.get_object()
+        photo.save()
+
+        messages.success(self.request, 'Photo added successfully!')
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        messages.error(self.request, 'Error adding photo. Please check the form.')
+        return super().form_invalid(form)
+
+    def get_success_url(self):
+        return reverse("todo-detail", kwargs={"pk": self.object.pk})
+```
+
+Since here we are using form to upload images the `enctype="multipart/form-data"` is required in the template.
+
+```html
+<form method="post" enctype="multipart/form-data">
+    <!--  -->
+</form>
+```

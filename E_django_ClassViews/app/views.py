@@ -1,12 +1,13 @@
 from django.shortcuts import render
 from django.utils import timezone
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.views.generic.list import ListView
 from django.views.generic.detail import DetailView
-from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.views.generic.edit import CreateView, UpdateView, DeleteView, FormMixin
 from django.core.paginator import Paginator
+from django.contrib import messages
 
-from .models import Todo
+from .models import PhotoModel, Todo
 
 from django import forms
 
@@ -67,8 +68,47 @@ class TodoList(ListView):
         return render(request, 'app/todo_list_table.html', context)
 
 
-class TodoDetailView(DetailView):
+class PhotoForm(forms.ModelForm):
+    class Meta:
+        model = PhotoModel
+        fields = ['caption', 'image']
+
+
+# https://docs.djangoproject.com/en/5.0/topics/class-based-views/mixins/#using-formmixin-with-detailview
+class TodoDetailView(FormMixin, DetailView):
     model = Todo
+    form_class = PhotoForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = self.get_form()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        # if not request.user.is_authenticated:
+        #     return HttpResponseForbidden()
+        self.object = self.get_object()  # !Important as it is used in form validation process,get_success_url
+        form = self.get_form()
+
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+
+    def form_valid(self, form):
+        photo = form.save(commit=False)
+        photo.todo = self.get_object()
+        photo.save()
+
+        messages.success(self.request, 'Photo added successfully!')
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        messages.error(self.request, 'Error adding photo. Please check the form.')
+        return super().form_invalid(form)
+
+    def get_success_url(self):
+        return reverse("todo-detail", kwargs={"pk": self.object.pk})
 
 
 class CreateTodoView(CreateView):

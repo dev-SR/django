@@ -1,8 +1,35 @@
-{% if object.complete == True %}
-    <h2 class="text-2xl font-bold">
-        <strike>{{ object.title }}</strike>
-    </h2>
-{% else %}
-    <h2 class="text-2xl font-bold">{{ object.title }}</h2>
-{% endif %}
-<a href="{% url 'todo-list' %}" class="underline text-indigo-500">Back to list</a>
+{% extends "_base.html" %}
+{% block content %}
+    <main class="flex flex-col items-center min-h-screen">
+        {% include "partials/messages.html" %}
+        {% if object.complete == True %}
+            <h2 class="text-2xl font-bold">
+                <strike>{{ object.title }}</strike>
+            </h2>
+        {% else %}
+            <h2 class="text-2xl font-bold">{{ object.title }}</h2>
+        {% endif %}
+        <a href="{% url 'todo-list' %}" class="underline text-indigo-500">Back to list</a>
+        <form method="post"
+              class="flex flex-col space-y-2 w-1/3"
+              enctype="multipart/form-data">
+            {% csrf_token %}
+            {% for field in form %}
+                {% if field.field.widget.input_type == 'checkbox' %}
+                    <div class="flex flex-row items-center space-x-2">
+                        {{ field }}
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    </div>
+                {% else %}
+                    <div class="flex flex-col items-start w-full">
+                        {{ field.label_tag }}
+                        {{ field }}
+                    </div>
+                {% endif %}
+                <div class="text-red-500">{{ field.errors }}</div>
+            {% endfor %}
+            <button type="submit"
+                    class="py-2 px-4 rounded-md bg-indigo-500 text-white hover:bg-indigo-600 ">Submit</button>
+        </form>
+    </main>
+{% endblock content %}
