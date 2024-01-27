@@ -8,6 +8,12 @@
     - [UpdateView](#updateview)
     - [DeleteView](#deleteview)
     - [Redirecting to all the views](#redirecting-to-all-the-views)
+  - [Advance ListView](#advance-listview)
+    - [ListView with Pagination](#listview-with-pagination)
+    - [Passing extra context to the template](#passing-extra-context-to-the-template)
+    - [Filtering the queryset](#filtering-the-queryset)
+    - [Search and Filtering the queryset using URL parameters](#search-and-filtering-the-queryset-using-url-parameters)
+    - [Dynamic search and filtering using htmx](#dynamic-search-and-filtering-using-htmx)
 
 **CBVs, or class-based views**, align with object-oriented principles, representing view calls through classes. They offer advantages such as straightforward extensibility and code reuse, simplifying complex tasks compared to FBVs (function-based views).
 
@@ -70,6 +76,8 @@ urlconfig = [
 - [https://www.dennisivy.com/django-class-based-views](https://www.dennisivy.com/django-class-based-views)
 - [https://ccbv.co.uk/](https://ccbv.co.uk/)
 
+Lets start with a simple model, which we will use to demonstrate the CRUD workflow. We will be using a simple todo model with the following fields:
+
 `app/models.py`
 
 ```python
@@ -77,6 +85,7 @@ from django.db import models
 class Todo(models.Model):
     title = models.CharField(max_length=200, blank=False)
     complete = models.BooleanField(default=False)
+    created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.title
@@ -369,3 +378,310 @@ urlpatterns = [
     </tr>
 {% endfor %}
 ```
+
+## Advance ListView
+
+
+We can override or implement properties and methods `ListView` class to customize the view.
+
+Doc:
+
+- [https://ccbv.co.uk/projects/Django/5.0/django.views.generic.list/ListView/](https://ccbv.co.uk/projects/Django/5.0/django.views.generic.list/ListView/)
+
+### ListView with Pagination
+
+```python
+from django.views.generic.list import ListView
+from .models import Todo
+
+class TodoList(ListView):
+    model = Todo
+    paginate_by = 10
+```
+
+In the template, we can use the `paginator` object as `page_obj` having the attributes such as `number`, `paginator`, `has_next`, `has_previous`, `has_other_pages`, `next_page_number`, `previous_page_number`, `start_index`, `end_index`, `page_range` etc.
+
+### Passing extra context to the template
+
+```python
+from django.views.generic.list import ListView
+from .models import Todo
+
+class TodoList(ListView):
+    model = Todo
+    paginate_by = 10
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Todo List'
+        return context
+```
+
+Now we can access the `title` in the template as `{{ title }}`.
+
+### Filtering the queryset
+
+filter by time created
+
+```python
+from django.views.generic.list import ListView
+from .models import Todo
+class TodoList(ListView):
+    model = Todo
+    paginate_by = 10
+
+    def get_queryset(self):
+        return Todo.objects.order_by('-created')
+```
+
+### Search and Filtering the queryset using URL parameters
+
+```python
+
+from django.views.generic.list import ListView
+
+class TodoList(ListView):
+    model = Todo
+    paginate_by = 10
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        filter = self.request.GET.get('filter', None)
+        search = self.request.GET.get('search', None)
+        if filter == 'active':
+            qs = qs.filter(complete=False)
+        elif filter == 'complete':
+            qs = qs.filter(complete=True)
+        if search:
+            qs = qs.filter(title__icontains=search)
+        return qs
+```
+
+In `templates\app\todo_list.html` we can add a form to filter the queryset.
+
+```html
+<!-- ... -->
+<form method="get" class="flex space-x-2">
+    <input type="text" name="search" id="search" class="px-2 py-1 border border-gray-700 rounded">
+    <select name="filter" id="filter" class="px-2 py-1 border border-gray-700 rounded">
+        <option value="all">All</option>
+        <option value="active">Active</option>
+        <option value="complete">Complete</option>
+    </select>
+    <button type="submit"
+            class="px-2 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600">Filter
+    </button>
+    <button> type="button"
+            class="px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
+            onclick="window.location.href = '{% url 'todo-list' %}'">Clear
+    </button>
+</form>
+<table id="todo-list">
+<!-- ... -->
+</table>
+
+```
+
+But his will not preserve the form. To preserve the form we can use `django.forms.Form` class and pass it to the template.
+
+```python
+
+from django.views.generic.list import ListView
+from django import forms
+
+class TodoListForm(forms.Form):
+    filter = forms.ChoiceField(choices=(('all', 'All'), ('active', 'Active'), ('complete', 'Complete')))
+    search = forms.CharField(max_length=100, required=False, label='Search')
+
+class TodoList(ListView):
+    model = Todo
+    paginate_by = 10
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        filter = self.request.GET.get('filter', None)
+        search = self.request.GET.get('search', None)
+        if filter == 'active':
+            qs = qs.filter(complete=False)
+        elif filter == 'complete':
+            qs = qs.filter(complete=True)
+        if search:
+            qs = qs.filter(title__icontains=search)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = TodoListForm(self.request.GET)
+        return context
+```
+
+
+`templates\app\todo_list.html`
+
+```html
+<!-- ... -->
+<form method="get" class="flex space-x-2">
+    {% for field in form %}<div class="w-40">{{ field }}</div>{% endfor %}
+    <button type="submit"
+            class="px-2 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600">Filter</button>
+    <button type="button"
+            class="px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
+            onclick="window.location.href = '{% url 'todo-list' %}'">Clear</button>
+</form>
+<table id="todo-list">
+<!-- ... -->
+</table>
+
+```
+
+### Dynamic search and filtering using htmx
+
+```python
+class TodoList(ListView):
+    model = Todo
+    paginate_by = 2
+
+    def get_queryset(self):  # exec order [2]
+        qs = super().get_queryset()
+        filter = self.request.GET.get('filter', None)
+        search = self.request.GET.get('search', None)
+        if "paginate_by" in self.request.GET:
+            paginate_by = self.request.GET.get('paginate_by')
+            if not paginate_by == "":
+                self.paginate_by = paginate_by
+
+        if filter == 'active':
+            qs = qs.filter(complete=False)
+        elif filter == 'complete':
+            qs = qs.filter(complete=True)
+        if search:
+            qs = qs.filter(title__icontains=search)
+        return qs
+
+    def get_context_data(self, **kwargs):  # exec order [3]
+        context = super().get_context_data(**kwargs)
+        context['search'] = self.request.GET.get('search', None)
+        context['filter'] = self.request.GET.get('filter', None)
+        context['paginate_by'] = self.request.GET.get('paginate_by', None)
+        context['search_options'] = ['all', 'active', 'complete']
+        context['paginate_by_options'] = ['2', '5', '10']
+        return context
+
+    def get(self, request, **kwargs):  # exec order [1]
+        isHtmx = request.headers.get('HX-Request')
+
+        # if request is not htmx then return the default response
+        if not isHtmx:
+            return super().get(request, **kwargs)
+
+        # else add custom paginated response
+        qs = self.get_queryset()
+        paginator = Paginator(qs, self.paginate_by)
+        page = request.GET.get('page', 1)
+        page_obj = paginator.get_page(page)
+
+        context = {
+            'page_obj': page_obj,
+        }
+
+        return render(request, 'app/todo_list_table.html', context)
+```
+
+Additional context data will be passed to populate the search and filter form as well as the pagination options according to the current state of url parameters.
+
+
+`templates\app\todo_list.html`
+
+Below we will be sending `GET` request using a `form` element but not submitting the form. Instead we will be using triggering when the user types in the search input or selects an option from the select element. This is done by `hx-trigger="keyup changed delay:250ms from:#search, change from:#filter, change from:#paginate_by"`, meaning the changes in the `#search`, `#filter` and `#paginate_by` elements will trigger the `GET` request, sending their values as parameters.
+
+Additionally, by `hx-push-url="true"` we are telling htmx to push the url, which will help us to preserve the state of current url parameters and form values and use them query the database.
+
+```html
+<!-- ... -->
+<form id="filter-form"
+        hx-get="{% url 'todo-list' %}"
+        hx-target="#todo-list"
+        hx-trigger="keyup changed delay:250ms from:#search, change from:#filter, change from:#paginate_by"
+        hx-push-url="true"
+        class="flex space-x-2"
+        autocomplete="off">
+    <!-- Search input -->
+    <input type="text"
+            name="search"
+            id="search"
+            class="px-2 py-1 border border-gray-700 rounded"
+            placeholder="Search"
+            {% if search %}value="{{ search }}"{% endif %}>
+    <!-- Filter select -->
+    <select name="filter"
+            id="filter"
+            class="px-2 py-1 border border-gray-700 rounded">
+        <option disabled value="" {% if filter == None %}selected{% endif %}>Filter by status</option>
+        {% for option in search_options %}
+            <option value="{{ option }}" {% if filter == option %}selected{% endif %}>{{ option|title }}</option>
+        {% endfor %}
+    </select>
+    <!-- Paginate by select -->
+    <select name="paginate_by"
+            id="paginate_by"
+            class="px-2 py-1 border border-gray-700 rounded">
+        <option disabled value="" {% if paginate_by == None %}selected{% endif %}>Paginate by</option>
+        {% for option in paginate_by_options %}
+            <option value="{{ option }}"
+                    {% if paginate_by == option %}selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+    </select>
+    <a href="{% url 'todo-list' %}"
+        class="items-start w-1/3 justify-items-start underline">Refresh</a>
+</form>
+<div id="todo-list">
+    <table class="table">
+
+    </table>
+    <!-- pagination starts -->
+    <nav class="pt-4 w-full">
+
+    </nav>
+    <!-- pagination end -->
+</div>
+```
+
+The dynamic htmx request will be processed by the `get()` method, which will return the `app/todo_list_table.html` template with paginated data.
+
+`templates\app\todo_list_table.html`
+
+```html
+<table class="table">
+    <!-- head -->
+    <tbody>
+        {% for object in page_obj %}
+        {% endfor %}
+    </tbody>
+</table>
+<!-- pagination starts -->
+<nav class="pt-4 w-full">
+    <ul class="flex justify-end w-full space-x-2">
+        {% if page_obj.has_previous %}
+            <li class="border border-gray-500 flex item-center justify-center">
+                <button class="text-blue-500 py-2 px-3 cursor-pointer"
+                        hx-get="{{ request.path }}?page={{ page_obj.previous_page_number }}"
+                        hx-target="#todo-list"
+                        hx-push-url="true"
+                        hx-include="#filter-form">Prev.</button>
+            </li>
+        {% endif %}
+        <!-- .... -->
+
+    </ul>
+</nav>
+<!-- pagination end -->
+```
+
+Notice that return pagination component is different from the default pagination component. This is because once will apply search and filer the pagination should also be dynamic and should be able to preserve the state of the current url parameters and form values when we go to the next page.
+
+To make pagination dynamic we need to add the following attributes to the pagination component.
+
+- `hx-get="{{ request.path }}?page={{ page_obj.previous_page_number }}"`: This will send a `GET` request to the current url with the `page` parameter set to the previous page number.
+- `hx-target="#todo-list"`: This will replace the content of the `#todo-list` element with the response.
+- `hx-push-url="true"`: This will push the url to the browser history.
+- `hx-include="#filter-form"`: This will include the `#filter-form` element in the request, which will preserve the state of the form.

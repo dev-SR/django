@@ -1,0 +1,123 @@
+<table class="table">
+    <!-- head -->
+    <thead>
+        <tr>
+            <th></th>
+            <th>Task</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for object in page_obj %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>
+                    {% if object.complete == True %}
+                        <strike>{{ object.title }}</strike>
+                    {% else %}
+                        <span>{{ object.title }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="flex space-x-2">
+                        <button class="btn btn-sm btn-info" href="{% url 'todo-detail' object.id %}">View</button>
+                        <button class="btn btn-sm btn-warning"
+                                href="{% url 'todo-update' object.id %}">Update</button>
+                        <button class="btn btn-sm btn-error btn-outline"
+                                href="{% url 'todo-delete' object.id %}">Delete</button>
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td></td>
+                <td>No objects yet.</td>
+                <td></td>
+            </tr>
+        {% endfor %}
+        <tr>
+            <td></td>
+            <td></td>
+            <td>
+                <div>
+                    <button class="btn btn-sm btn-primary" href="{% url 'todo-create' %}">Add +</button>
+                </div>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<!-- pagination starts -->
+<nav class="pt-4 w-full">
+    <ul class="flex justify-end w-full space-x-2">
+        {% if page_obj.has_previous %}
+            <li class="border border-gray-500 flex item-center justify-center">
+                <button class="text-blue-500 py-2 px-3 cursor-pointer"
+                        hx-get="{{ request.path }}?page={{ page_obj.previous_page_number }}"
+                        hx-target="#todo-list"
+                        hx-push-url="true"
+                        hx-include="#filter-form">Prev.</button>
+            </li>
+        {% endif %}
+        {% if page_obj.number > 3 %}
+            <li class="border border-gray-500 flex item-center justify-center">
+                <button class="text-blue-500 py-2 px-3 cursor-pointer"
+                        hx-get="{{ request.path }}?page=1"
+                        hx-target="#todo-list"
+                        hx-push-url="true"
+                        hx-include="#filter-form">1</button>
+            </li>
+        {% endif %}
+        {% if page_obj.number > 4 %}
+            <li class="border border-gray-500 flex item-center justify-center">
+                <span class="text-blue-500 py-2 px-3 cursor-pointer">....</span>
+            </li>
+        {% endif %}
+        {% for i in page_obj.paginator.page_range %}
+            {% if page_obj.number == i %}
+                <li class="border border-gray-500 flex item-center justify-center bg-white text-black py-2 px-3">
+                    {{ i }}
+                    <span class="sr-only"></span>
+                </li>
+            {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                <li class="border border-gray-500 flex item-center justify-center">
+                    <button class="text-blue-500 py-2 px-3 cursor-pointer"
+                            hx-get="{{ request.path }}?page={{ i }}"
+                            hx-target="#todo-list"
+                            hx-push-url="true"
+                            hx-include="#filter-form">{{ i }}</button>
+                </li>
+            {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+            {% if page_obj.number < page_obj.paginator.num_pages|add:'-3' %}
+                <li class="border border-gray-500 flex item-center justify-center">
+                    <span class="text-blue-500 py-2 px-3 cursor-pointer">....</span>
+                </li>
+                <li class="border border-gray-500 flex item-center justify-center">
+                    <button class="text-blue-500 py-2 px-3 cursor-pointer"
+                            hx-get="{{ request.path }}?page={{ page_obj.paginator.num_pages }}"
+                            hx-target="#todo-list"
+                            hx-push-url="true"
+                            hx-include="#filter-form">{{ page_obj.paginator.num_pages }}</button>
+                </li>
+            {% elif page_obj.number < page_obj.paginator.num_pages|add:'-2' %}
+                <li class="border border-gray-500 flex item-center justify-center">
+                    <button class="text-blue-500 py-2 px-3 cursor-pointer"
+                            hx-get="{{ request.path }}?page={{ page_obj.paginator.num_pages }}"
+                            hx-target="#todo-list"
+                            hx-push-url="true"
+                            hx-include="#filter-form">{{ page_obj.paginator.num_pages }}</button>
+                </li>
+            {% endif %}
+            <li class="border border-gray-500 flex item-center justify-center">
+                <button class="text-blue-500 py-2 px-3 cursor-pointer"
+                        hx-get="{{ request.path }}?page={{ page_obj.next_page_number }}"
+                        hx-target="#todo-list"
+                        hx-push-url="true"
+                        hx-include="#filter-form"
+                        hx-push-url="true">Next</button>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+<!-- pagination end -->

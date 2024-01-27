@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "debug_toolbar",  # new
     'django_extensions',  # new
     "compressor",  # new
+    'widget_tweaks',
     "app",
 ]
 
