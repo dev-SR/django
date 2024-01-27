@@ -127,16 +127,17 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'  # For development only
-MEDIA_URL = ''  # For development only
+STATIC_URL = "/static/"  # For development only
 STATICFILES_DIRS = [  # where to find static files
     BASE_DIR / "static",
 ]
+
+MEDIA_ROOT = BASE_DIR / "uploads"
+MEDIA_URL = "/media/"  # For development only
+
 # production time static files generation by 'python manage.py collectstatic':
 # where to put static files for production
-STATIC_ROOT = BASE_DIR / "staticfiles"
-# where to put media files for production
-MEDIA_ROOT = BASE_DIR / "static/images"
+# STATIC_ROOT = BASE_DIR / "staticfiles"
 # default / The list of finder backends that know how to find static files in various locations.
 STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.FileSystemFinder",
