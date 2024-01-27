@@ -610,22 +610,17 @@ Additionally, by `hx-push-url="true"` we are telling htmx to push the url, which
     <input type="text"
             name="search"
             id="search"
-            class="px-2 py-1 border border-gray-700 rounded"
             placeholder="Search"
             {% if search %}value="{{ search }}"{% endif %}>
     <!-- Filter select -->
-    <select name="filter"
-            id="filter"
-            class="px-2 py-1 border border-gray-700 rounded">
+    <select name="filter" id="filter">
         <option disabled value="" {% if filter == None %}selected{% endif %}>Filter by status</option>
         {% for option in search_options %}
             <option value="{{ option }}" {% if filter == option %}selected{% endif %}>{{ option|title }}</option>
         {% endfor %}
     </select>
     <!-- Paginate by select -->
-    <select name="paginate_by"
-            id="paginate_by"
-            class="px-2 py-1 border border-gray-700 rounded">
+    <select name="paginate_by" id="paginate_by">
         <option disabled value="" {% if paginate_by == None %}selected{% endif %}>Paginate by</option>
         {% for option in paginate_by_options %}
             <option value="{{ option }}"

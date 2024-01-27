@@ -13,5 +13,10 @@ module.exports = {
 	theme: {
 		extend: {}
 	},
+	daisyui: {
+		themes: [
+			'light' // first one will be the default theme
+		]
+	},
 	plugins: [require('@tailwindcss/forms'), require('daisyui')]
 };
