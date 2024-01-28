@@ -1,4 +1,5 @@
-from django.shortcuts import render
+from django.http import HttpRequest, HttpResponse
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.urls import reverse, reverse_lazy
 from django.views.generic.list import ListView
@@ -126,3 +127,14 @@ class UpdateTodoView(UpdateView):
 class DeleteTodoView(DeleteView):
     model = Todo
     success_url = reverse_lazy('todo-list')
+
+
+def delete_photo(request, photo_id, todo_id):
+    photo = get_object_or_404(PhotoModel, id=photo_id)
+    photo.delete()
+
+    todo = get_object_or_404(Todo, id=todo_id)
+    context = {
+        'object': todo,
+    }
+    return render(request, 'app/image_grid.html', context)

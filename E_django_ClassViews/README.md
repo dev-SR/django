@@ -15,6 +15,7 @@
     - [Search and Filtering the queryset using URL parameters](#search-and-filtering-the-queryset-using-url-parameters)
     - [Dynamic search and filtering using htmx](#dynamic-search-and-filtering-using-htmx)
   - [DetailView + FormMixin/FormView](#detailview--formmixinformview)
+    - [(optional) delete](#optional-delete)
 
 **CBVs, or class-based views**, align with object-oriented principles, representing view calls through classes. They offer advantages such as straightforward extensibility and code reuse, simplifying complex tasks compared to FBVs (function-based views).
 
@@ -746,3 +747,49 @@ Since here we are using form to upload images the `enctype="multipart/form-data"
     <!--  -->
 </form>
 ```
+
+### (optional) delete
+
+```html
+{% if object.photos.all %}
+    <h2>Images:</h2>
+    <div class="grid grid-flow-col gap-4">
+        {% for photo in object.photos.all %}
+            <div class="relative group border w-[180px] rounded overflow-hidden transition-transform duration-300 transform hover:scale-105">
+                <img src="{{ photo.image.url }}"
+                     alt="{{ photo.caption }}"
+                     class="w-full h-[150px] object-cover">
+                <div class="p-1 absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black bg-opacity-50 transition-opacity duration-300">
+                    <button class="text-white px-4 py-2 bg-red-500 rounded hover:bg-red-600"
+                            hx-delete="{% url 'delete-photo' photo.id object.id %}"
+                            hx-target="#image-grid">Delete</button>
+                </div>
+                <div class="p-1">
+                    <p class="text-lg">{{ photo.caption }}</p>
+                    <p class="text-gray-500">{{ photo.created|date:"F j, Y" }}</p>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p>No images available.</p>
+{% endif %}
+```
+
+```python
+# url:    path('delete_photo/<int:photo_id>/<int:todo_id>/', views.delete_photo, name='delete-photo'),
+
+# view:
+def delete_photo(request, photo_id, todo_id):
+    photo = get_object_or_404(PhotoModel, id=photo_id)
+    photo.delete()
+
+    todo = get_object_or_404(Todo, id=todo_id)
+    context = {
+        'object': todo,
+    }
+    return render(request, 'app/image_grid.html', context)
+
+```
+
+

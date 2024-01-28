@@ -1,0 +1,23 @@
+{% if object.photos.all %}
+    <h2>Images:</h2>
+    <div class="grid grid-flow-col gap-4">
+        {% for photo in object.photos.all %}
+            <div class="relative group border w-[180px] rounded overflow-hidden transition-transform duration-300 transform hover:scale-105">
+                <img src="{{ photo.image.url }}"
+                     alt="{{ photo.caption }}"
+                     class="w-full h-[150px] object-cover">
+                <div class="p-1 absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black bg-opacity-50 transition-opacity duration-300">
+                    <button class="text-white px-4 py-2 bg-red-500 rounded hover:bg-red-600"
+                            hx-delete="{% url 'delete-photo' photo.id object.id %}"
+                            hx-target="#image-grid">Delete</button>
+                </div>
+                <div class="p-1">
+                    <p class="text-lg">{{ photo.caption }}</p>
+                    <p class="text-gray-500">{{ photo.created|date:"F j, Y" }}</p>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p>No images available.</p>
+{% endif %}
