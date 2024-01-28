@@ -41,54 +41,56 @@
                        class="items-start w-1/3 justify-items-start underline">Refresh</a>
                 </form>
                 <div id="todo-list">
-                    <table class="table">
-                        <!-- head -->
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>Task</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for object in object_list %}
+                    <div class="max-h-[300px] overflow-y-auto">
+                        <table class="table">
+                            <!-- head -->
+                            <thead>
                                 <tr>
-                                    <td>{{ forloop.counter }}</td>
+                                    <th></th>
+                                    <th>Task</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for object in object_list %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>
+                                            {% if object.complete == True %}
+                                                <strike>{{ object.title }}</strike>
+                                            {% else %}
+                                                <span>{{ object.title }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="flex space-x-2">
+                                                <a class="btn btn-sm btn-info" href="{% url 'todo-detail' object.id %}">View</a>
+                                                <a class="btn btn-sm btn-warning"
+                                                   href="{% url 'todo-update' object.id %}">Update</a>
+                                                <a class="btn btn-sm btn-error btn-outline"
+                                                   href="{% url 'todo-delete' object.id %}">Delete</a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td></td>
+                                        <td>No objects yet.</td>
+                                        <td></td>
+                                    </tr>
+                                {% endfor %}
+                                <tr>
+                                    <td></td>
+                                    <td></td>
                                     <td>
-                                        {% if object.complete == True %}
-                                            <strike>{{ object.title }}</strike>
-                                        {% else %}
-                                            <span>{{ object.title }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div class="flex space-x-2">
-                                            <a class="btn btn-sm btn-info" href="{% url 'todo-detail' object.id %}">View</a>
-                                            <a class="btn btn-sm btn-warning"
-                                               href="{% url 'todo-update' object.id %}">Update</a>
-                                            <a class="btn btn-sm btn-error btn-outline"
-                                               href="{% url 'todo-delete' object.id %}">Delete</a>
+                                        <div>
+                                            <a class="btn btn-sm btn-primary" href="{% url 'todo-create' %}">Add +</a>
                                         </div>
                                     </td>
                                 </tr>
-                            {% empty %}
-                                <tr>
-                                    <td></td>
-                                    <td>No objects yet.</td>
-                                    <td></td>
-                                </tr>
-                            {% endfor %}
-                            <tr>
-                                <td></td>
-                                <td></td>
-                                <td>
-                                    <div>
-                                        <a class="btn btn-sm btn-primary" href="{% url 'todo-create' %}">Add +</a>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                            </tbody>
+                        </table>
+                    </div>
                     <!-- pagination starts -->
                     <nav class="pt-4 w-full">
                         <ul class="flex justify-end w-full space-x-2">
