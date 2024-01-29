@@ -17,7 +17,6 @@ class ReviewSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     # nested relationships
     reviews = ReviewSerializer(many=True, read_only=True)
-    category = CategorySerializer(read_only=True)
 
     class Meta:
         model = Product
