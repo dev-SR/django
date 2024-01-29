@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,10 +23,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-7+s556g2@axlzd$+bm2bz_7lkwdu-k4ky$&*k(x)71^v-vtoc8"
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG')
 
 ALLOWED_HOSTS = []
 
@@ -41,6 +44,7 @@ INSTALLED_APPS = [
     "debug_toolbar",  # new
     'django_extensions',  # new
     "compressor",  # new
+    "users",  # new
 ]
 
 MIDDLEWARE = [
@@ -82,13 +86,18 @@ WSGI_APPLICATION = "core.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
+# Default to SQLite
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
+
+# Check if DATABASE_URL is specified and not empty in .env for PostgreSQL
+if 'DATABASE_URL' in os.environ and os.environ['DATABASE_URL']:
+    import dj_database_url
+    DATABASES['default'] = dj_database_url.config(default=os.environ['DATABASE_URL'])
 
 
 # Password validation
@@ -121,20 +130,23 @@ USE_I18N = True
 
 USE_TZ = True
 
+LOGIN_URL = "users/login"
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'  # For development only
-MEDIA_URL = ''  # For development only
+STATIC_URL = "/static/"  # For development only
 STATICFILES_DIRS = [  # where to find static files
     BASE_DIR / "static",
 ]
+
+MEDIA_ROOT = BASE_DIR / "uploads"
+MEDIA_URL = "/media/"  # For development only
+
 # production time static files generation by 'python manage.py collectstatic':
 # where to put static files for production
-STATIC_ROOT = BASE_DIR / "staticfiles"
-# where to put media files for production
-MEDIA_ROOT = BASE_DIR / "static/images"
+# STATIC_ROOT = BASE_DIR / "staticfiles"
 # default / The list of finder backends that know how to find static files in various locations.
 STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.FileSystemFinder",

@@ -12,6 +12,11 @@ ipython = "*"
 bpython = "*"
 werkzeug = "*"
 django-debug-toolbar = "*"
+djlint = "*"
+pillow = "*"
+python-dotenv = "*"
+dj-database-url = "*"
+psycopg2 = "*"
 
 [dev-packages]
 

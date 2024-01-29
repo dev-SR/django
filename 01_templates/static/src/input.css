@@ -19,18 +19,25 @@
 	select,
 	select[multiple],
 	textarea {
-		@apply border-gray-300 rounded-md;
+		@apply border-gray-300 dark:border-gray-500 dark:text-gray-300 dark:bg-gray-800 rounded-md w-full;
 	}
 
 	input[type='checkbox'] {
-		@apply rounded-sm;
+		@apply rounded-sm border-gray-300 dark:border-gray-500 dark:bg-gray-800;
 	}
 	input[type='checkbox']:checked {
-		@apply rounded border-gray-300 text-indigo-600 shadow-sm;
+		@apply rounded border-gray-300 dark:border-gray-500  text-indigo-600 bg-indigo-600 shadow-sm;
 	}
 
+	input[type='radio'] {
+		@apply border-gray-300 dark:border-gray-500 dark:bg-gray-800;
+	}
 	input[type='radio']:checked {
-		@apply border-gray-300 text-indigo-600 shadow-sm;
+		@apply border-gray-300 dark:border-gray-500 text-indigo-600 bg-indigo-600 shadow-sm;
+	}
+
+	input[type='file'] {
+		@apply mt-1 block w-full border border-gray-200 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-300 shadow-sm rounded-lg text-sm  focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50 disabled:pointer-events-none file:border-0 file:bg-gray-300 dark:file:bg-gray-900 dark:file:text-white file:me-4 file:py-3 file:px-4 file:font-semibold;
 	}
 
 	input[type='text']:focus,
