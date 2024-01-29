@@ -1,0 +1,278 @@
+# Django Rest API
+
+## Installation
+
+```bash
+pipenv install djangorestframework
+```
+
+## Introduction
+
+Django REST Framework (DRF) is a widely-used, full-featured API framework designed for building RESTful APIs with Django. At its core, DRF integrates with Django's core features -- **models, views, and URLs** -- making it simple and seamless to create a RESTful API.
+
+The core concepts:
+
+- Serializers
+- Views and ViewSets
+- Routers
+- Authentication and Authorization
+
+DRF is composed of the following components:
+
+- `Serializers` are used to convert Django QuerySets and model instances to (serialization) and from (deserialization) JSON (and a number of other data rendering formats like XML and YAML). Otherwise, we will get  `TypeError: Object of type 'User' is not JSON serializable`
+- `Views` (along with `ViewSets`), which are similar to traditional Django views, handle RESTful HTTP requests and responses. The view itself uses serializers to validate incoming payloads and contains the necessary logic to return the response. Viewsets are coupled with routers, which map the views back to the exposed URLs.
+
+<p align="center">
+<img src="img/ViewsSerializers.jpg" alt="ViewsSerializers.jpg" width="700px"/>
+</p>
+
+Although, DRF provides a number of ways to build APIs, the most common approach is to use a combination of `ModelSerializer` for serialization and `APIView` for views.
+
+### Serializers
+
+Again, serializers are used to convert Django QuerySets and model instances to and from JSON. Also, before deserializing the data, for incoming payloads, serializers validate the shape of the data.
+
+Why does the data need to be (de)serialized?
+
+Django QuerySets and model instances are Django-specific and, as such, not universal. In other words, the data structure needs to be converted into a simplified structure before it can be communicated over a RESTful API.
+
+<p align="center">
+<img src="img/serializer.jpg" alt="serializer.jpg" width="600px"/>
+</p>
+
+### Quick Examples
+
+To specify how incoming and outgoing data gets serialized and deserialized, you create a [SomeResource]Serializer class. So, if you have a Task model, you'd create a TaskSerializer class.
+
+For example:
+
+```python
+# model
+class Task(models.Model):
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    completed = models.BooleanField(default=False)
+
+
+# basic serializer
+class TaskSerializer(serializers.Serializer):
+    title = serializers.CharField()
+    description = serializers.CharField()
+    completed = serializers.BooleanField()
+```
+
+Similarly to how Django forms are created, when the serialization is closely coupled to the model, you can extend from `ModelSerializer`:
+
+```python
+class TaskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = "__all__"
+```
+
+You can easily adapt a ModelSerializer to your needs:
+
+```python
+class TaskSerializer(serializers.ModelSerializer):
+    short_description = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Task
+        fields = ["title", "description", "completed", "short_description"]
+        read_only_fields = ['completed']
+
+    def get_short_description(self, obj):
+        return obj.description[:50]
+```
+
+
+Here, we-
+
+- Explicitly defined the fields the serializer has access to via the `fields` attribute
+- Set the `completed` field to `read-only`
+- Added additional data -- `short_description`
+
+### Implement Non Primary Key Based CRUD Operations
+
+`serializers.py`
+
+```python
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'
+
+class ReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = '__all__'
+```
+
+Non Primary Key Based CRUD Operations involves getting lists, creating new objects.
+
+```python
+class CategoryListView(APIView):
+    def get(self, request):
+        categories = Category.objects.all()
+        serializer = CategorySerializer(categories, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = CategorySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+```
+
+```python
+urlpatterns = [
+    path('categories/', CategoryListView.as_view(), name='category-list'),
+    path('products/', ProductListView.as_view(), name='product-list'),
+]
+```
+
+### Implement Primary Key Based CRUD Operations
+
+```python
+urlpatterns = [
+    # ...
+    path('categories/<int:pk>/', CategoryDetailView.as_view(), name='category-detail'),
+    path('products/<int:pk>/', ProductDetailView.as_view(), name='product-detail'),
+    path('products/<int:product_id>/reviews/', ProductReviewsView.as_view(), name='product-reviews'),
+    path('products/<int:product_id>/reviews/<int:review_id>/', ProductReviewsView.as_view(), name='review-detail'),
+]
+```
+
+```python
+class CategoryDetailView(APIView):
+    def get(self, request, pk):
+        category = get_object_or_404(Category, pk=pk)
+        serializer = CategorySerializer(category, context={'request': request})
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        category = get_object_or_404(Category, pk=pk)
+        serializer = CategorySerializer(category, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        category = get_object_or_404(Category, pk=pk)
+        category.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class ProductDetailView(APIView):
+    def get(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        serializer = ProductSerializer(product)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        serializer = ProductSerializer(product, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        product.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class ProductReviewsView(APIView):
+
+    def get(self, request, product_id, review_id=None):
+        product = Product.objects.get(pk=product_id)
+
+        if review_id:
+            review = Review.objects.get(pk=review_id, product=product)
+            serializer = ReviewSerializer(review)
+            return Response(serializer.data)
+
+        reviews = Review.objects.filter(product=product)
+        serializer = ReviewSerializer(reviews, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, product_id):
+        product = Product.objects.get(pk=product_id)
+        serializer = ReviewSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(product=product)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, product_id, review_id):
+        product = Product.objects.get(pk=product_id)
+        review = Review.objects.get(pk=review_id, product=product)
+        serializer = ReviewSerializer(review, data=request.data)
+        if serializer.is_valid():
+            serializer.save(product=product)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, product_id, review_id):
+        product = Product.objects.get(pk=product_id)
+        review = Review.objects.get(pk=review_id, product=product)
+        review.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+```
+
+## Mixin in DRF
+
+### Mixin for List and Create (non primary key based CRUD)
+
+```python
+
+
+
+
+
+### Related Fields in Django REST Framework
+
+DRF tip:
+
+To represent model relationships in a serializer, you can use various related fields that represent the target of the relationship in different ways:
+
+- `StringRelatedField`
+- `PrimaryKeyRelatedField`
+- `HyperlinkedRelatedField`
+- `SlugRelatedField`
+- `HyperlinkedIdentityField`
+
+Examples:
+
+```python
+class TagSerializer(serializers.ModelSerializer):
+
+    posts = serializers.StringRelatedField(many=True)
+    # result: ["My story" (from __str__ method)]
+
+
+    posts = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    # result: [1]
+
+
+    posts = serializers.HyperlinkedRelatedField(
+        many=True,
+        read_only=True,
+        view_name='post-detail'
+    )
+    # result: ["http://127.0.0.1:8000/1/"]
+
+
+    posts = serializers.SlugRelatedField(
+        many=True,
+        read_only=True,
+        slug_field='title'
+     )
+    # result: ["My story" (from title field)]
+
+
+    tag_detail = serializers.HyperlinkedIdentityField(view_name='tag-detail')
+    # result: "http://127.0.0.1:8000/tags/1/"
+    # *HyperlinkedIdentityField is used for current object, not related objects
+```

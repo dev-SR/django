@@ -1,0 +1,25 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+django = "*"
+django-compressor = "*"
+django-browser-reload = "*"
+django-extensions = "*"
+ipython = "*"
+bpython = "*"
+werkzeug = "*"
+django-debug-toolbar = "*"
+djlint = "*"
+pillow = "*"
+python-dotenv = "*"
+dj-database-url = "*"
+psycopg2 = "*"
+djangorestframework = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"

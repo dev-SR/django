@@ -1,0 +1,32 @@
+{% extends "_base.html" %}
+{% block content %}
+    <main class="flex flex-col items-center min-h-screen dark:bg-gray-700">
+        <form method="post"
+              class="flex flex-col space-y-2 w-1/3"
+              enctype="multipart/form-data"
+              autocomplete="off">
+            {% csrf_token %}
+            {% for error in form.non_field_errors %}<div class="text-red-500">{{ error }}</div>{% endfor %}
+            {% for field in form %}
+                {% if field.field.widget.input_type == 'checkbox' %}
+                    <div class="flex flex-row items-center space-x-2">
+                        {{ field }}
+                        <label for="{{ field.id_for_label }}" class="dark:text-gray-300">{{ field.label }}</label>
+                    </div>
+                {% else %}
+                    <div class="flex flex-col items-start w-full">
+                        <span class="dark:text-gray-300">{{ field.label_tag }}</span>
+                        {{ field }}
+                    </div>
+                {% endif %}
+                <div class="text-red-500">{{ field.errors }}</div>
+            {% endfor %}
+            <button type="submit"
+                    class="py-2 px-4 rounded-md bg-indigo-500 text-white hover:bg-indigo-600 ">Login</button>
+        </form>
+        <p class="mt-4 dark:text-gray-300">
+            Don't have an account? <a class="text-indigo-500 hover:underline cursor-pointer"
+    href="{% url 'register' %}">Register here</a>.
+        </p>
+    </main>
+{% endblock content %}

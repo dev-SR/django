@@ -1,0 +1,36 @@
+{% load compress %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>
+            {% block page_title %}
+                Django + Tailwind CSS + HTMX
+            {% endblock page_title %}
+        </title>
+        {% compress css %}
+            <link rel="stylesheet" href="{% static 'src/output.css' %}" />
+        {% endcompress %}
+        <!-- HTMX start -->
+        {% compress js %}
+            <script type="text/javascript" src="{% static 'src/htmx.js' %}"></script>
+        {% endcompress %}
+        <!-- HTMX end-->
+    </head>
+    <body {% if request.session.is_dark_mode %}class="dark"{% endif %}>
+        {% include 'layout/navbar.html' %}
+        {% block content %}
+        {% endblock content %}
+        <!-- HTMX start -->
+        <script>
+			document.body.addEventListener('htmx:configRequest', (event) => {
+				event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+			});
+
+        </script>
+        <!-- HTMX end-->
+    </body>
+</html>
