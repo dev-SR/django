@@ -321,43 +321,11 @@ class CategoryDetailView(mixins.RetrieveModelMixin,
 
     def delete(self, request, pk):
         return self.destroy(request, pk)
+```
 
-# class ProductDetailView(APIView):
-#     def get(self, request, pk):
-#         product = get_object_or_404(Product, pk=pk)
-#         serializer = ProductSerializer(product)
-#         return Response(serializer.data)
+For complex route pattern, we have to customize the `queryset`.
 
-#     def put(self, request, pk):
-#         product = get_object_or_404(Product, pk=pk)
-#         serializer = ProductSerializer(product, data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#     def delete(self, request, pk):
-#         product = get_object_or_404(Product, pk=pk)
-#         product.delete()
-#         return Response(status=status.HTTP_204_NO_CONTENT)
-
-# v2
-class ProductDetailView(mixins.RetrieveModelMixin,
-                        mixins.UpdateModelMixin,
-                        mixins.DestroyModelMixin,
-                        generics.GenericAPIView):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
-
-    def get(self, request, *args, **kwargs):
-        return self.retrieve(request, *args, **kwargs)
-
-    def put(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
-
-    def delete(self, request, *args, **kwargs):
-        return self.destroy(request, *args, **kwargs)
-
+```python
 # class ProductReviewsView(APIView):#     def get(self, request, product_id, review_id=None):
 #         product = Product.objects.get(pk=product_id)
 
@@ -393,11 +361,6 @@ class ProductDetailView(mixins.RetrieveModelMixin,
 #         review.delete()
 #         return Response(status=status.HTTP_204_NO_CONTENT)
 
-```
-
-For complex route pattern, we have to customize the `queryset`.
-
-```python
 # v2
 class ProductReviewsView(mixins.ListModelMixin,
                          mixins.CreateModelMixin,
@@ -528,10 +491,103 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProductSerializer
 ```
 
+## ViewSet
+
+### ModelViewSet
+
+- [https://testdriven.io/blog/drf-views-part-3/#modelviewset](https://testdriven.io/blog/drf-views-part-3/#modelviewset)
+
+ModelViewSet provides default create, retrieve, update, partial_update, destroy and list actions since it uses GenericViewSet and all of the available mixins.
+
+```python
+# class CategoryListView(generics.ListCreateAPIView):
+#     queryset = Category.objects.all()
+#     serializer_class = CategorySerializer
+
+# class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
+#     queryset = Category.objects.all()
+#     serializer_class = CategorySerializer
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
 
 
+# class ProductListView(generics.ListCreateAPIView):
+#     queryset = Product.objects.all()
+#     serializer_class = ProductSerializer
 
+# class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
+#     queryset = Product.objects.all()
+#     serializer_class = ProductSerializer
 
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+```
+
+ViewSets come with a router class that automatically generates the URL configurations.
+
+DRF comes with two routers out-of-the-box:
+
+- DefaultRouter
+- SimpleRouter
+
+The main difference between them is that `DefaultRouter` includes a default API root view:
+
+Defining the router:
+
+```python
+from . import views
+from rest_framework.routers import DefaultRouter
+router = DefaultRouter()
+router.register(r'products', views.ProductViewSet)
+router.register(r'categories',  views.CategoryViewSet)
+
+urlpatterns = [
+    # path('categories/', views.CategoryListView.as_view(), name='category-list'),
+    # path('products/', views.ProductListView.as_view(), name='product-list'),
+    # path('categories/<int:pk>/', views.CategoryDetailView.as_view(), name='category-detail'),
+    # path('products/<int:pk>/', views.ProductDetailView.as_view(), name='product-detail'),
+    path("", include(router.urls)),
+]
+```
+
+### Customizing the ModelViewSet
+
+```python
+class ProductReviewsViewSet(viewsets.ModelViewSet):
+    serializer_class = ReviewSerializer
+
+    def get_queryset(self):
+        product_id = self.kwargs.get('product_id')
+        if self.kwargs.get('review_id'):
+            return Review.objects.filter(pk=self.kwargs['review_id'], product__pk=product_id)
+        return Review.objects.filter(product__pk=product_id)
+
+    def perform_create(self, serializer):
+        product_id = self.kwargs.get('product_id')
+        product = Product.objects.get(pk=product_id)
+        serializer.save(product=product)
+
+    def perform_update(self, serializer):
+        product_id = self.kwargs.get('product_id')
+        product = Product.objects.get(pk=product_id)
+        serializer.save(product=product)
+
+    def perform_destroy(self, instance):
+        instance.delete()
+```
+
+```python
+# ...
+router.register(r'products/(?P<product_id>.*)/reviews', views.ProductReviewsViewSet, basename='product-reviews')
+urlpatterns = [
+    path("", include(router.urls)),
+    # path('products/<int:product_id>/reviews/', views.ProductReviewsView.as_view(), name='product-reviews'),
+    # path('products/<int:product_id>/reviews/<int:review_id>/', views.ProductReviewsView.as_view(), name='review-detail'),
+]
+```
 
 ## Related Fields in Django REST Framework
 

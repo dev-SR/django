@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, generics, mixins
 from rest_framework.generics import get_object_or_404
+from rest_framework import viewsets
 
 from .models import Category, Product, Review
 from .serializers import CategorySerializer, ProductSerializer, ReviewSerializer
@@ -38,9 +39,9 @@ from .serializers import CategorySerializer, ProductSerializer, ReviewSerializer
 # v3
 
 
-class CategoryListView(generics.ListCreateAPIView):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
+# class CategoryListView(generics.ListCreateAPIView):
+#     queryset = Category.objects.all()
+#     serializer_class = CategorySerializer
 
 # v1
 # class ProductListView(APIView):
@@ -70,9 +71,9 @@ class CategoryListView(generics.ListCreateAPIView):
 #         return self.create(request)
 
 
-class ProductListView(generics.ListCreateAPIView):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
+# class ProductListView(generics.ListCreateAPIView):
+#     queryset = Product.objects.all()
+#     serializer_class = ProductSerializer
 
 
 # class CategoryDetailView(APIView):
@@ -148,12 +149,22 @@ class ProductListView(generics.ListCreateAPIView):
 #     def delete(self, request, *args, **kwargs):
 #         return self.destroy(request, *args, **kwargs)
 
-class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
+# class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
+#     queryset = Category.objects.all()
+#     serializer_class = CategorySerializer
+
+
+# class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
+#     queryset = Product.objects.all()
+#     serializer_class = ProductSerializer
+
+
+class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
+class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
 
@@ -196,43 +207,66 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 # v2
-class ProductReviewsView(mixins.ListModelMixin,
-                         mixins.CreateModelMixin,
-                         mixins.RetrieveModelMixin,
-                         mixins.UpdateModelMixin,
-                         mixins.DestroyModelMixin,
-                         generics.GenericAPIView):
-    queryset = Review.objects.all()
+# class ProductReviewsView(mixins.ListModelMixin,
+#                          mixins.CreateModelMixin,
+#                          mixins.RetrieveModelMixin,
+#                          mixins.UpdateModelMixin,
+#                          mixins.DestroyModelMixin,
+#                          generics.GenericAPIView):
+#     queryset = Review.objects.all()
+#     serializer_class = ReviewSerializer
+
+#     def get_queryset(self):
+#         product = get_object_or_404(Product, pk=self.kwargs['product_id'])
+#         return Review.objects.filter(product=product)
+
+#     def get_object(self):
+#         if 'review_id' in self.kwargs:
+#             return get_object_or_404(Review, pk=self.kwargs['review_id'])
+#         else:
+#             return None
+
+#     def get(self, request, *args, **kwargs):
+#         if 'review_id' in kwargs:
+#             return self.retrieve(request, *args, **kwargs)
+#         else:
+#             return self.list(request, *args, **kwargs)
+
+#     def post(self, request, *args, **kwargs):
+#         product = get_object_or_404(Product, pk=self.kwargs['product_id'])
+#         return self.create(request, product=product, *args, **kwargs)
+
+#     def put(self, request, *args, **kwargs):
+#         product = get_object_or_404(Product, pk=self.kwargs['product_id'])
+#         return self.update(request, product=product, *args, **kwargs)
+
+#     def delete(self, request, *args, **kwargs):
+#         if 'review_id' in kwargs:
+#             return self.destroy(request, *args, **kwargs)
+#         else:
+#             product = get_object_or_404(Product, pk=self.kwargs['product_id'])
+#             Review.objects.filter(product=product).delete()
+#             return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ProductReviewsViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
 
     def get_queryset(self):
-        product = get_object_or_404(Product, pk=self.kwargs['product_id'])
-        return Review.objects.filter(product=product)
+        product_id = self.kwargs.get('product_id')
+        if self.kwargs.get('review_id'):
+            return Review.objects.filter(pk=self.kwargs['review_id'], product__pk=product_id)
+        return Review.objects.filter(product__pk=product_id)
 
-    def get_object(self):
-        if 'review_id' in self.kwargs:
-            return get_object_or_404(Review, pk=self.kwargs['review_id'])
-        else:
-            return None
+    def perform_create(self, serializer):
+        product_id = self.kwargs.get('product_id')
+        product = Product.objects.get(pk=product_id)
+        serializer.save(product=product)
 
-    def get(self, request, *args, **kwargs):
-        if 'review_id' in kwargs:
-            return self.retrieve(request, *args, **kwargs)
-        else:
-            return self.list(request, *args, **kwargs)
+    def perform_update(self, serializer):
+        product_id = self.kwargs.get('product_id')
+        product = Product.objects.get(pk=product_id)
+        serializer.save(product=product)
 
-    def post(self, request, *args, **kwargs):
-        product = get_object_or_404(Product, pk=self.kwargs['product_id'])
-        return self.create(request, product=product, *args, **kwargs)
-
-    def put(self, request, *args, **kwargs):
-        product = get_object_or_404(Product, pk=self.kwargs['product_id'])
-        return self.update(request, product=product, *args, **kwargs)
-
-    def delete(self, request, *args, **kwargs):
-        if 'review_id' in kwargs:
-            return self.destroy(request, *args, **kwargs)
-        else:
-            product = get_object_or_404(Product, pk=self.kwargs['product_id'])
-            Review.objects.filter(product=product).delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+    def perform_destroy(self, instance):
+        instance.delete()
