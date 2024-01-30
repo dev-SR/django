@@ -45,7 +45,14 @@ INSTALLED_APPS = [
     'django_extensions',  # new
     "compressor",  # new
     "users",  # new
+    'rest_framework',
+    'rest_framework.authtoken',
 ]
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

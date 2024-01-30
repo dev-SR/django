@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+	input[type='text'],
+	input[type='password'],
+	input[type='email'],
+	input[type='number'],
+	input[type='search'],
+	input[type='tel'],
+	input[type='url'],
+	input[type='date'],
+	input[type='datetime-local'],
+	input[type='month'],
+	input[type='week'],
+	input[type='time'],
+	input[type='color'],
+	select,
+	select[multiple],
+	textarea {
+		@apply border-gray-300 dark:border-gray-500 dark:text-gray-300 dark:bg-gray-800 rounded-md w-full;
+	}
+
+	input[type='checkbox'] {
+		@apply rounded-sm border-gray-300 dark:border-gray-500 dark:bg-gray-800;
+	}
+	input[type='checkbox']:checked {
+		@apply rounded border-gray-300 dark:border-gray-500  text-indigo-600 bg-indigo-600 shadow-sm;
+	}
+
+	input[type='radio'] {
+		@apply border-gray-300 dark:border-gray-500 dark:bg-gray-800;
+	}
+	input[type='radio']:checked {
+		@apply border-gray-300 dark:border-gray-500 text-indigo-600 bg-indigo-600 shadow-sm;
+	}
+
+	input[type='file'] {
+		@apply mt-1 block w-full border border-gray-200 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-300 shadow-sm rounded-lg text-sm  focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50 disabled:pointer-events-none file:border-0 file:bg-gray-300 dark:file:bg-gray-900 dark:file:text-white file:me-4 file:py-3 file:px-4 file:font-semibold;
+	}
+
+	input[type='text']:focus,
+	input[type='password']:focus,
+	input[type='email']:focus,
+	input[type='number']:focus,
+	input[type='search']:focus,
+	input[type='tel']:focus,
+	input[type='url']:focus,
+	input[type='date']:focus,
+	input[type='datetime-local']:focus,
+	input[type='month']:focus,
+	input[type='week']:focus,
+	input[type='time']:focus,
+	input[type='color']:focus,
+	input[type='radio']:focus,
+	input[type='checkbox']:focus,
+	select:focus,
+	select[multiple]:focus,
+	textarea:focus {
+		@apply border-indigo-300 ring ring-offset-0 ring-indigo-200 ring-opacity-50;
+	}
+}

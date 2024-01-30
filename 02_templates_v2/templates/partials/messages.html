@@ -1,0 +1,11 @@
+{% for message in messages %}
+    <div class="fixed bottom-0 right-0 p-4 mb-4 mr-4 border rounded-lg {% if message.tags == 'success' %} bg-green-200 border-green-500 text-green-700 {% elif message.tags == 'info' %} bg-blue-200 border-blue-500 text-blue-700 {% elif message.tags == 'warning' %} bg-yellow-200 border-yellow-500 text-yellow-700 {% elif message.tags == 'error' %} bg-red-200 border-red-500 text-red-700 {% endif %}"
+         id='message'>
+        <p>
+            <em>{{ message.level_tag|title }}:</em> {{ message }}
+        </p>
+    </div>
+{% endfor %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => setTimeout(() => document.querySelectorAll('#message').forEach(element => element.remove()), 3000));
+</script>
