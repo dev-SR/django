@@ -1,5 +1,23 @@
 # Django Rest API
 
+- [Django Rest API](#django-rest-api)
+  - [Installation](#installation)
+  - [Introduction](#introduction)
+    - [Serializers](#serializers)
+    - [Quick Examples](#quick-examples)
+    - [Implement Non Primary Key Based CRUD Operations](#implement-non-primary-key-based-crud-operations)
+    - [Implement Primary Key Based CRUD Operations](#implement-primary-key-based-crud-operations)
+  - [Mixin in DRF](#mixin-in-drf)
+    - [Mixin for List and Create (non primary key based CRUD)](#mixin-for-list-and-create-non-primary-key-based-crud)
+    - [Mixin for Retrieve, Update and Destroy (primary key based CRUD)](#mixin-for-retrieve-update-and-destroy-primary-key-based-crud)
+  - [Concrete View](#concrete-view)
+    - [For List and Create (non primary key based CRUD)](#for-list-and-create-non-primary-key-based-crud)
+    - [For Retrieve, Update and Destroy (primary key based CRUD)](#for-retrieve-update-and-destroy-primary-key-based-crud)
+  - [ViewSet](#viewset)
+    - [ModelViewSet](#modelviewset)
+    - [Customizing the ModelViewSet](#customizing-the-modelviewset)
+  - [Related Fields in Django REST Framework](#related-fields-in-django-rest-framework)
+
 ## Installation
 
 ```bash
