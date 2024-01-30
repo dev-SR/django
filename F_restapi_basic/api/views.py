@@ -158,13 +158,17 @@ from .serializers import CategorySerializer, ProductSerializer, ReviewSerializer
 #     queryset = Product.objects.all()
 #     serializer_class = ProductSerializer
 
+from rest_framework.permissions import IsAuthenticated
+
 
 class CategoryViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
 class ProductViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
 

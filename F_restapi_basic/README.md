@@ -15,7 +15,13 @@
     - [For Retrieve, Update and Destroy (primary key based CRUD)](#for-retrieve-update-and-destroy-primary-key-based-crud)
   - [ViewSet](#viewset)
     - [ModelViewSet](#modelviewset)
-    - [Customizing the ModelViewSet](#customizing-the-modelviewset)
+      - [Customizing the ModelViewSet](#customizing-the-modelviewset)
+  - [Token Authentication](#token-authentication)
+    - [Configure Token Authentication](#configure-token-authentication)
+    - [Automatically generate token for new user using signals](#automatically-generate-token-for-new-user-using-signals)
+    - [Registers and login serializers](#registers-and-login-serializers)
+    - [Registers and login view](#registers-and-login-view)
+    - [Protecting Routes 🔥](#protecting-routes-)
   - [Related Fields in Django REST Framework](#related-fields-in-django-rest-framework)
 
 ## Installation
@@ -571,7 +577,7 @@ urlpatterns = [
 ]
 ```
 
-### Customizing the ModelViewSet
+#### Customizing the ModelViewSet
 
 ```python
 class ProductReviewsViewSet(viewsets.ModelViewSet):
@@ -605,6 +611,169 @@ urlpatterns = [
     # path('products/<int:product_id>/reviews/', views.ProductReviewsView.as_view(), name='product-reviews'),
     # path('products/<int:product_id>/reviews/<int:review_id>/', views.ProductReviewsView.as_view(), name='review-detail'),
 ]
+```
+
+## Token Authentication
+
+- [https://www.pythonworld.io/blogs/how-to-implement-token-authentication-in-django-and-django-rest-framework](https://www.pythonworld.io/blogs/how-to-implement-token-authentication-in-django-and-django-rest-framework)
+
+### Configure Token Authentication
+
+```python
+# settings.py
+INSTALLED_APPS = [
+   ...
+   'rest_framework.authtoken'
+   ...
+]
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+}
+
+```
+
+Run: `python manage.py migrate`
+
+### Automatically generate token for new user using signals
+
+`users\api\signals.py`
+
+```python
+# By generating token using signals is the best way. So here we actually use post_save signals, that will create a token, when new user will create.
+from django.conf import settings
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from rest_framework.authtoken.models import Token
+
+
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_auth_token(sender, instance=None, created=False, **kwargs):
+    if created:
+        Token.objects.create(user=instance)
+```
+
+If you plan to use signals (ex: `signals.py`) within an app (ex: posts), simply get in the habit of adding this method to your apps.py `AppConfig` class everytime.
+
+`users\apps.py`
+
+```python
+from django.apps import AppConfig
+class UsersConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "users"
+
+    def ready(self) -> None:
+        from .api import signals
+        return super().ready()
+```
+
+### Registers and login serializers
+
+`users\api\serializers.py`
+
+```python
+from rest_framework import serializers
+from django.contrib.auth.models import User
+from django.contrib.auth.hashers import make_password
+
+
+class RegisterSerializer(serializers.ModelSerializer):
+    """override create method to change the password into hash."""
+
+    def create(self, validated_data):
+        validated_data["password"] = make_password(validated_data.get("password"))
+        return super(RegisterSerializer, self).create(validated_data)
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password']
+
+
+class LoginSerializer(serializers.ModelSerializer):
+    username = serializers.CharField()
+
+    class Meta:
+        model = User
+        fields = ['username', 'password']
+```
+
+### Registers and login view
+
+`users\api\views.py`
+
+```python
+from django.contrib.auth import authenticate
+from rest_framework import generics, status
+from rest_framework.authtoken.models import Token
+from rest_framework.response import Response
+
+from .serializers import LoginSerializer, RegisterSerializer
+
+
+class RegisterAPIView(generics.GenericAPIView):
+    """Handles user registration."""
+
+    serializer_class = RegisterSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            """If the validation success, it will created a new user."""
+            serializer.save()
+            res = {'status': status.HTTP_201_CREATED}
+            return Response(res, status=status.HTTP_201_CREATED)
+        res = {'status': status.HTTP_400_BAD_REQUEST, 'data': serializer.errors}
+        return Response(res, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LoginAPIView(generics.GenericAPIView):
+    """Handles user login and returns authentication token."""
+
+    serializer_class = LoginSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            username = serializer.validated_data["username"]
+            password = serializer.validated_data["password"]
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                """We are reterving the token for authenticated user."""
+                token = Token.objects.get(user=user)
+                response = {
+                    "status": status.HTTP_200_OK,
+                    "message": "success",
+                    "data": {
+                        "Token": token.key
+                    }
+                }
+                return Response(response, status=status.HTTP_200_OK)
+            else:
+                response = {
+                    "status": status.HTTP_401_UNAUTHORIZED,
+                    "message": "Invalid Email or Password",
+                }
+                return Response(response, status=status.HTTP_401_UNAUTHORIZED)
+        response = {
+            "status": status.HTTP_400_BAD_REQUEST,
+            "message": "bad request",
+            "data": serializer.errors
+        }
+        return Response(response, status=status.HTTP_400_BAD_REQUEST)
+```
+
+
+### Protecting Routes 🔥
+
+```python
+from rest_framework.permissions import IsAuthenticated
+
+class ProductViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
 ```
 
 ## Related Fields in Django REST Framework
