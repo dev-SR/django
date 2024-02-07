@@ -61,3 +61,16 @@
 		@apply border-indigo-300 ring ring-offset-0 ring-indigo-200 ring-opacity-50;
 	}
 }
+
+@layer components {
+	.htmx-indicator {
+		opacity: 0;
+		transition: opacity 500ms ease-in;
+	}
+	.htmx-request .htmx-indicator {
+		opacity: 1;
+	}
+	.htmx-request.htmx-indicator {
+		opacity: 1;
+	}
+}

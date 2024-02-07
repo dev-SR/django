@@ -16,6 +16,7 @@ def change_theme(request: HttpRequest):
 
 # @login_required
 def index(request):
-    v = 10
-    print(v)
+    if "is_dark_mode" not in request.session:
+        request.session["is_dark_mode"] = False
+
     return render(request, 'index.html')

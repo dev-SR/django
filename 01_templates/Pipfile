@@ -17,6 +17,9 @@ pillow = "*"
 python-dotenv = "*"
 dj-database-url = "*"
 psycopg2 = "*"
+whitenoise = "*"
+gunicorn = "*"
+faker = "*"
 
 [dev-packages]
 
