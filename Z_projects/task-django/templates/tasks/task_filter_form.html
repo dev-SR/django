@@ -1,0 +1,73 @@
+<form id="filter-form"
+      hx-get="{% url 'task-list' %}"
+      hx-target="#task-list"
+      hx-trigger="keyup changed delay:250ms from:#search_title, change from:#filter_creation_date, change from:#filter_due_date, change from:#filter_priority, change from:#filter_complete, change from:#paginate_by"
+      hx-push-url="true"
+      hx-indicator="#loading-indicator"
+      class="flex space-x-2 items-center"
+      autocomplete="off">
+        <input type="text"
+               name="search_title"
+               id="search_title"
+               placeholder="Search by Title"
+               class="py-[.2rem] px-2 !w-72"
+               value="{{ request.GET.search_title }}">
+        <select name="filter_priority"
+                id="filter_priority"
+                class="py-[.2rem] px-2 !w-32">
+                <option disabled
+                        value=""
+                        {% if not request.GET.filter_priority %}selected{% endif %}>Priority</option>
+                <option value=""
+                        {% if request.GET.filter_priority == '' %}selected{% endif %}>All</option>
+                <option value="low"
+                        {% if request.GET.filter_priority == 'low' %}selected{% endif %}>Low</option>
+                <option value="medium"
+                        {% if request.GET.filter_priority == 'medium' %}selected{% endif %}>Medium</option>
+                <option value="high"
+                        {% if request.GET.filter_priority == 'high' %}selected{% endif %}>High</option>
+        </select>
+        <select name="filter_complete"
+                id="filter_complete"
+                class="py-[.2rem] px-2 !w-32">
+                <option disabled
+                        value=""
+                        {% if not request.GET.filter_complete %}selected{% endif %}>Status</option>
+                <option value=""
+                        {% if request.GET.filter_complete == '' %}selected{% endif %}>All</option>
+                <option value="true"
+                        {% if request.GET.filter_complete == 'true' %}selected{% endif %}>Completed</option>
+                <option value="false"
+                        {% if request.GET.filter_complete == 'false' %}selected{% endif %}>Incomplete</option>
+        </select>
+        <input name="filter_creation_date"
+               id="filter_creation_date"
+               placeholder="Creation Date"
+               type="text"
+               onfocus="(this.type='date')"
+               onblur="(this.type='text')"
+               class="py-[.2rem] px-2 !w-32"
+               value="{{ request.GET.filter_creation_date }}">
+        <input name="filter_due_date"
+               id="filter_due_date"
+               placeholder="Due Date"
+               type="text"
+               onfocus="(this.type='date')"
+               onblur="(this.type='text')"
+               class="py-[.2rem] px-2 !w-32"
+               value="{{ request.GET.filter_due_date }}">
+        <!-- Paginate by select -->
+        <select name="paginate_by" id="paginate_by" class="py-[.2rem] px-2 !w-32">
+                <option disabled
+                        value=""
+                        {% if not request.GET.paginate_by %}selected{% endif %}>Paginate by</option>
+                <option value="5" {% if request.GET.paginate_by == '5' %}selected{% endif %}>5</option>
+                <option value="10"
+                        {% if request.GET.paginate_by == '10' %}selected{% endif %}>10</option>
+                <option value="15"
+                        {% if request.GET.paginate_by == '15' %}selected{% endif %}>15</option>
+                <option value="20"
+                        {% if request.GET.paginate_by == '20' %}selected{% endif %}>20</option>
+        </select>
+        <a href="{% url 'task-list' %}" class="cursor-pointer"><i class="fa-solid fa-arrows-rotate dark:text-white"></i></a>
+</form>

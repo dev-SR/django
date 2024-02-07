@@ -1,0 +1,26 @@
+{% if object.task_photos.all %}
+    <div class="flex flex-col items-center">
+        <h2 class="text-xl font-bold py-2">Images</h2>
+        <div class="grid grid-flow-col gap-4">
+            {% for photo in object.task_photos.all %}
+                <div class="relative group w-[180px] rounded transition-transform duration-300 transform hover:scale-105 overflow-hidden shadow ring-1 ring-black dark:ring-gray-600 ring-opacity-5">
+                    <img src="{{ photo.image.url }}"
+                         alt="{{ photo.caption }}"
+                         class="w-full h-[150px] object-cover">
+                    <div class="p-1 absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black bg-opacity-50 transition-opacity duration-300">
+                        <button class="text-white px-4 py-2 bg-red-500 rounded hover:bg-red-600"
+                                hx-delete="{% url 'delete-photo' photo.id object.id %}"
+                                hx-target="#image-grid"
+                                hx-indicator="#loading-indicator">Delete</button>
+                    </div>
+                    <div class="py-1 px-2">
+                        <p class="text-sm font-semibold">{{ photo.caption }}</p>
+                        <p class="text-gray-500 text-xs">{{ photo.created_at|date:"F j, Y" }}</p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% else %}
+    <p>No images available.</p>
+{% endif %}

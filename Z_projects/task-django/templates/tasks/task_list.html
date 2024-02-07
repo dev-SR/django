@@ -1,0 +1,23 @@
+{% extends "_base.html" %}
+{% block content %}
+    <main class="flex flex-col min-h-screen dark:bg-gray-900">
+        <div class="p-8 flex flex-col space-y-4">
+            <div id="loading-indicator" class="htmx-indicator">{% include 'partials/loading_indicator.html' %}</div>
+            <div class="flex items-center justify-between w-full">
+                <h2 class="text-xl font-bold dark:text-white">Tasks</h2>
+                <div class="flex space-x-2">
+                    <a class="py-[.2rem] px-8 bg-indigo-600 hover:bg-indigo-700 rounded-md text-white text-sm flex items-center justify-center space-x-2"
+                       href="{% url 'task-create' %}">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Add Task</span>
+                    </a>
+                    {% include 'tasks/task_filter_form.html' %}
+                </div>
+            </div>
+            <div id="task-list">
+                {% include 'tasks/table/ssr_table.html' %}
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock content %}

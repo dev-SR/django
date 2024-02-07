@@ -1,0 +1,18 @@
+{% extends "_base.html" %}
+{% block content %}
+    <main class="flex flex-col items-center min-h-screen dark:bg-gray-900 dark:text-white">
+        <form method="post"
+              action=""
+              class="flex flex-col items-center space-y-4 mt-8 border border-gray-700 rounded-lg shadow p-4">
+            {% csrf_token %}
+            <p>Are you sure you want to delete "{{ object }}"?</p>
+            <div class="flex w-full justify-end space-x-2">
+                <a href="{% url 'task-list' %}"
+                   class="px-2 py-1 bg-gray-700 text-white rounded hover:bg-gray-600">Cancel</a>
+                <input type="submit"
+                       value="Confirm"
+                       class="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600">
+            </div>
+        </form>
+    </main>
+{% endblock content %}
