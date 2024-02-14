@@ -13,9 +13,9 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
-    print("*"*50)
-    print(f"DEBUG: {settings.DEBUG}")
-    print("*"*50)
+    # print("*"*50)
+    # print(f"DEBUG: {settings.DEBUG}")
+    # print("*"*50)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     import debug_toolbar
