@@ -1,0 +1,8 @@
+{% for product in object_list %}
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-sm font-semibold mb-2">{{ product }}</h2>
+        <p class="text-gray-700">{{ product.description }}</p>
+        <p class="text-gray-700">{{ product.price }}</p>
+        <p class="text-gray-700">Stock: {{ product.stock }}</p>
+    </div>
+{% endfor %}

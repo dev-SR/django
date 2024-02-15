@@ -29,10 +29,15 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django_browser_reload",  # new
-    'django_extensions',  # new
-    "compressor",  # new
-    "users",  # new
+    # 3rd parties........
+    "django_browser_reload",
+    'django_extensions',
+    "compressor",
+    "template_partials",
+    # my apps......
+    "users",
+    "htmx",
+
 ]
 
 MIDDLEWARE = [

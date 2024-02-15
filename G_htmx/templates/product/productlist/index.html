@@ -1,0 +1,27 @@
+{% extends "_base.html" %}
+{% load static %}
+{% block content %}
+    <main class="flex flex-col items-center justify-center min-h-screen dark:bg-gray-900">
+        <div class="flex flex-col space-y-4">
+            <!-- Filter Form -->
+            <form hx-get="{% url 'index' %}"
+                  hx-target="#product_list"
+                  hx-trigger="change">
+                <label for="category">Filter by Category:</label>
+                <select name="category" id="category">
+                    <option value="">All</option>
+                    <!-- Iterate over categories to populate options -->
+                    {% for category in categories %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}
+                </select>
+                <label for="search">Search:</label>
+                <input type="text" name="search" id="search">
+                <!-- <button type="submit">Apply Filter</button> -->
+                <!-- Add other filter fields as needed -->
+            </form>
+            <!-- Product Cards -->
+            <div id="product_list" class="flex flex-col space-y-4">
+                {% include 'product/productlist/product_item_partial.html' %}
+            </div>
+        </div>
+    </main>
+{% endblock content %}
