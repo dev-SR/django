@@ -13,11 +13,14 @@
             {% for value in option_dict.values %}
                 <div>
                     <input type="checkbox"
-                           id="{{ option_dict.option }}_{{ forloop.counter }}"
+                           id="{{ value.name }}"
                            name="{{ option_dict.option }}"
                            value="{{ value.name }}"
                            {% if value.checked %}checked{% endif %}>
-                    <label for="{{ option_dict.option }}_{{ forloop.counter }}">{{ value.name }}</label>
+                    <label for="{{ value.name }}"
+                           {% if not value.available %}class="text-gray-300 dark:text-gray-600"{% endif %}>
+                        {{ value.name }}
+                    </label>
                 </div>
             {% endfor %}
         </fieldset>
