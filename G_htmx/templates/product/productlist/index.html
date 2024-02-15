@@ -1,23 +1,45 @@
 {% extends "_base.html" %}
 {% load static %}
 {% block content %}
-    <main class="flex flex-col items-center justify-center min-h-screen dark:bg-gray-900">
-        <div class="flex flex-col space-y-4">
+    <main class="flex flex-col min-h-screen dark:bg-gray-900">
+        <div class="flex space-x-4 p-4">
             <!-- Filter Form -->
-            <form hx-get="{% url 'index' %}"
-                  hx-target="#product_list"
-                  hx-trigger="change">
-                <label for="category">Filter by Category:</label>
-                <select name="category" id="category">
-                    <option value="">All</option>
-                    <!-- Iterate over categories to populate options -->
-                    {% for category in categories %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}
-                </select>
-                <label for="search">Search:</label>
-                <input type="text" name="search" id="search">
-                <!-- <button type="submit">Apply Filter</button> -->
-                <!-- Add other filter fields as needed -->
-            </form>
+            <div class="flex flex-col w-60">
+                <form hx-get="{% url 'index' %}"
+                      hx-target="#product_list"
+                      hx-trigger="input change delay:300ms"
+                      hx-push-url="false"
+                      class="w-full dark:text-white">
+                    <label for="search">Search:</label>
+                    <input type="text"
+                           name="search"
+                           id="search"
+                           placeholder="Search products...">
+                    <label for="category">Filter by Category:</label>
+                    <select name="category" id="category">
+                        <option value="">All</option>
+                        <!-- Iterate over categories to populate options -->
+                        {% for category in categories %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}
+                    </select>
+                    <div id="dynamic_filter">
+                        {% for option_dict in options %}
+                            <fieldset>
+                                <legend class="font-bold">{{ option_dict.option }}</legend>
+                                {% for value in option_dict.values %}
+                                    <div>
+                                        <input type="checkbox"
+                                               id="{{ option_dict.option }}_{{ forloop.counter }}"
+                                               name="{{ option_dict.option }}"
+                                               value="{{ value.name }}"
+                                               {% if value.checked %}checked{% endif %}>
+                                        <label for="{{ option_dict.option }}_{{ forloop.counter }}">{{ value.name }}</label>
+                                    </div>
+                                {% endfor %}
+                            </fieldset>
+                        {% endfor %}
+                    </div>
+                </form>
+            </div>
             <!-- Product Cards -->
             <div id="product_list" class="flex flex-col space-y-4">
                 {% include 'product/productlist/product_item_partial.html' %}

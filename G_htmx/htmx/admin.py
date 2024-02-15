@@ -74,9 +74,18 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Option)
 class OptionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name')
+    list_display = ('id', 'name', 'category', 'computed_values')
     list_display_links = ('id', 'name')
     search_fields = ('name',)
+
+    def computed_values(self, obj):
+        obj.variant_options.all()
+        values = []
+        for vo in obj.variant_options.all():
+            values.append(vo.value)
+        return ', '.join(list(set(values)))
+
+    computed_values.short_description = 'Values'
 
 
 @admin.register(Attribute)

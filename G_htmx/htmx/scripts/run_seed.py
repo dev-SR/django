@@ -106,7 +106,7 @@ def run():
                     option_value = random.choice(option_values)
                     VariantOption.objects.create(
                         variant=variant,
-                        option=Option.objects.get_or_create(name=option_name)[0],
+                        option=Option.objects.get_or_create(name=option_name, category=category)[0],
                         value=option_value,
                     )
                 print(variant.variant_name())

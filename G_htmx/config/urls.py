@@ -9,7 +9,7 @@ urlpatterns = [
     path("switch/", change_theme, name="change_theme"),
     path("", HomeListView, name='index'),
     path("", include('users.urls')),
-    path("__reload__/", include("django_browser_reload.urls"))
+    path("__reload__/", include("django_browser_reload.urls")),
 ]
 
 if settings.DEBUG:

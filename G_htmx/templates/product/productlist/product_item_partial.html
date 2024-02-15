@@ -1,8 +1,25 @@
 {% for product in object_list %}
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-sm font-semibold mb-2">{{ product }}</h2>
-        <p class="text-gray-700">{{ product.description }}</p>
-        <p class="text-gray-700">{{ product.price }}</p>
-        <p class="text-gray-700">Stock: {{ product.stock }}</p>
+    <div class="rounded-lg shadow-md p-6 dark:bg-gray-800">
+        <h2 class="text-sm font-semibold mb-2 dark:text-white">{{ product }}</h2>
+        <p class="text-gray-700 dark:text-gray-400">{{ product.description }}</p>
+        <p class="text-gray-700 dark:text-gray-400">{{ product.price }}</p>
+        <p class="text-gray-700 dark:text-gray-400">Stock: {{ product.stock }}</p>
     </div>
 {% endfor %}
+<div id="dynamic_filter" hx-swap-oob="true">
+    {% for option_dict in options %}
+        <fieldset>
+            <legend class="font-bold">{{ option_dict.option }}</legend>
+            {% for value in option_dict.values %}
+                <div>
+                    <input type="checkbox"
+                           id="{{ option_dict.option }}_{{ forloop.counter }}"
+                           name="{{ option_dict.option }}"
+                           value="{{ value.name }}"
+                           {% if value.checked %}checked{% endif %}>
+                    <label for="{{ option_dict.option }}_{{ forloop.counter }}">{{ value.name }}</label>
+                </div>
+            {% endfor %}
+        </fieldset>
+    {% endfor %}
+</div>
