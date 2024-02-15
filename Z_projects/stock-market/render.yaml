@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: core
+    buildCommand: './build.sh'
+    env: python
+    startCommand: 'gunicorn core.wsgi:application'

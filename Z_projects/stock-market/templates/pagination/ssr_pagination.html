@@ -1,0 +1,43 @@
+<nav class="isolate inline-flex -space-x-px rounded-md shadow-sm mt-4 dark:text-white">
+    {% if page_obj.has_previous %}
+        <a href="{{ request.path }}?page={{ page_obj.previous_page_number }}"
+           class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 focus:z-20 focus:outline-offset-0">
+            <span class="sr-only">Previous</span>
+            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-="true">
+                <path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd" />
+            </svg>
+        </a>
+    {% endif %}
+    {% if page_obj.number > 3 %}
+        <a class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900  dark:text-gray-200 ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 focus:z-20 focus:outline-offset-0"
+           href="{{ request.path }}?page=1">1</a>
+    {% endif %}
+    {% if page_obj.number > 4 %}
+        <span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900  dark:text-gray-200 ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 focus:z-20 focus:outline-offset-0">....</span>
+    {% endif %}
+    {% for i in page_obj.paginator.page_range %}
+        {% if page_obj.number == i %}
+            <span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold ring-1 ring-inset ring-indigo-300 dark:ring-indigo-500 hover:bg-indigo-500 focus:z-20 focus:outline-offset-0 bg-indigo-600 text-white disabled">{{ i }}</span>
+        {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+            <a class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900  dark:text-gray-200 ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 focus:z-20 focus:outline-offset-0 "
+               href="{{ request.path }}?page={{ i }}">{{ i }}</a>
+        {% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}
+        {% if page_obj.number < page_obj.paginator.num_pages|add:'-3' %}
+            <span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900  dark:text-gray-200 ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 focus:z-20 focus:outline-offset-0">....</span>
+            <a class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900  dark:text-gray-200 ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 focus:z-20 focus:outline-offset-0"
+               href="?page={{ page_obj.paginator.num_pages }}">{{ page_obj.paginator.num_pages }}</a>
+        {% elif page_obj.number < page_obj.paginator.num_pages|add:'-2' %}
+            <a class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900  dark:text-gray-200 ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 focus:z-20 focus:outline-offset-0"
+               href="?page={{ page_obj.paginator.num_pages }}">{{ page_obj.paginator.num_pages }}</a>
+        {% endif %}
+        <a href="?page={{ page_obj.next_page_number }}"
+           class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 focus:z-20 focus:outline-offset-0">
+            <span class="sr-only">Next</span>
+            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-="true">
+                <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+            </svg>
+        </a>
+    {% endif %}
+</nav>

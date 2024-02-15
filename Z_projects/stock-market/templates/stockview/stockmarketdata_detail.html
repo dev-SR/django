@@ -1,0 +1,38 @@
+{% extends "_base.html" %}
+{% block content %}
+    <main class="flex flex-col items-center  min-h-screen dark:bg-gray-900 dark:text-white">
+        <div class="max-w-3xl mx-auto mt-8 p-6 rounded-lg shadow-md dark:bg-gray-800">
+            <h2 class="text-2xl font-bold mb-4">Stock Market Data Detail</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-1">
+                    <p class="font-bold">Date:</p>
+                    <p>{{ stock_data.date }}</p>
+                </div>
+                <div class="col-span-1">
+                    <p class="font-bold">Trade Code:</p>
+                    <p>{{ stock_data.trade_code }}</p>
+                </div>
+                <div class="col-span-full">
+                    <p class="font-bold">High:</p>
+                    <p>{{ stock_data.high }}</p>
+                </div>
+                <div class="col-span-full">
+                    <p class="font-bold">Low:</p>
+                    <p>{{ stock_data.low }}</p>
+                </div>
+                <div class="col-span-full">
+                    <p class="font-bold">Open:</p>
+                    <p>{{ stock_data.open }}</p>
+                </div>
+                <div class="col-span-full">
+                    <p class="font-bold">Close:</p>
+                    <p>{{ stock_data.close }}</p>
+                </div>
+                <div class="col-span-full">
+                    <p class="font-bold">Volume:</p>
+                    <p>{{ stock_data.volume }}</p>
+                </div>
+            </div>
+        </div>
+    </main>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "_base.html" %}
+{% block content %}
+    <main class="flex flex-col items-center min-h-screen dark:bg-gray-900 dark:text-white">
+        <div class="p-8 flex flex-col space-y-4">
+            <div>
+                <form action="" method="get" class="flex space-x-4 w-full">
+                    <input type="text"
+                           id="trade_code"
+                           name="trade_code"
+                           list="trade_codes"
+                           placeholder='Select a trade code for visualization'>
+                    <datalist id="trade_codes">
+                        {% for code in trade_codes %}<option value="{{ code }}">{% endfor %}
+                        </datalist>
+                        <input type="submit"
+                               value="Filter"
+                               class="py-2 px-8 bg-indigo-600 hover:bg-indigo-700 rounded-md text-white text-sm flex items-center justify-center space-x-2">
+                        <a class="py-2 px-8 bg-gray-600 hover:bg-gray-700 rounded-md text-white text-sm flex items-center justify-center space-x-2"
+                           href=" {% url 'index' %}">
+                            <span>Clear</span>
+                        </a>
+                    </form>
+                </div>
+                <div id="chart">{{ chart_html|safe }}</div>
+                <div class="flex items-center justify-between w-full">
+                    <h2 class="text-xl font-bold dark:text-white">Stocks</h2>
+                    <div class="flex space-x-2">
+                        <a class="py-2 px-8 bg-indigo-600 hover:bg-indigo-700 rounded-md text-white text-sm flex items-center justify-center space-x-2"
+                           href=" {% url 'create' %}">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Add stock</span>
+                        </a>
+                    </div>
+                </div>
+                <div id="stock-list">{% include 'stockview/table/ssr_table.html' %}</div>
+            </div>
+        </main>
+    {% endblock content %}
