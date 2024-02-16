@@ -5,7 +5,8 @@
         <div class="flex space-x-4 p-4">
             <!-- Filter Form -->
             <div class="flex flex-col w-60">
-                <form hx-get="{% url 'index' %}"
+                <form id="filter-form"
+                      hx-get="{% url 'index' %}"
                       hx-target="#product_list"
                       hx-trigger="input change delay:300ms"
                       hx-push-url="false"
@@ -38,11 +39,22 @@
                             </fieldset>
                         {% endfor %}
                     </div>
+                    <button type="reset">Reset</button>
                 </form>
             </div>
             <!-- Product Cards -->
             <div id="product_list" class="flex flex-col space-y-4">
-                {% include 'product/productlist/product_item_partial.html' %}
+                {% for product in page_obj %}
+                    <div class="rounded-lg shadow-md p-6 dark:bg-gray-800">
+                        <h2 class="text-sm font-semibold mb-2 dark:text-white">{{ product }}</h2>
+                        <p class="text-gray-700 dark:text-gray-400">{{ product.description }}</p>
+                        <p class="text-gray-700 dark:text-gray-400">{{ product.price }}</p>
+                        <p class="text-gray-700 dark:text-gray-400">Stock: {{ product.stock }}</p>
+                    </div>
+                {% endfor %}
+                <!-- Paginate -->
+                <p class="text-xs text-gray-700 dark:text-gray-300">Total Products: {{ page_obj.paginator.count }}</p>
+                {% include 'pagination/ssr_pagination.html' %}
             </div>
         </div>
     </main>

@@ -8,6 +8,7 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.views.generic.list import ListView
 from django.db.models import Q
+from django.core.paginator import Paginator
 
 
 def change_theme(request: HttpRequest):
@@ -23,11 +24,12 @@ class HomeList(ListView):
     model = ProductVariant
     template_name = "product/productlist/index.html"
     product_template_partial = "product/productlist/product_item_partial.html"
+    paginate_by = 4
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['categories'] = Category.objects.all()
-        context['options'] = Option.objects.get_options_with_values()
+        # context['options'] = Option.objects.get_options_with_values()
 
         return context
 
@@ -45,7 +47,7 @@ class HomeList(ListView):
 
         # Collect selected filter values for each option
         for key, values in request.GET.lists():
-            if values and key != 'category' and key != 'search':
+            if values and key not in ["category", "search", "page"]:
                 selected_filters[key] = values
 
         product_variants_queryset = ProductVariant.objects.all()
@@ -53,6 +55,12 @@ class HomeList(ListView):
         # Apply category filter
         if category_id:
             product_variants_queryset = product_variants_queryset.filter(product__category__id=category_id)
+            # Apply selected filters to the queryset
+            for option_name, option_values in selected_filters.items():
+                q_objects = Q()
+                for value in option_values:
+                    q_objects |= Q(variant_options__option__name=option_name, variant_options__value=value)
+                product_variants_queryset = product_variants_queryset.filter(q_objects)
 
         # Apply search filter
         if search_query:
@@ -60,53 +68,49 @@ class HomeList(ListView):
                 Q(product__name__icontains=search_query) | Q(sku__icontains=search_query)
             )
 
-        # Apply selected filters to the queryset
-        for option_name, option_values in selected_filters.items():
-            q_objects = Q()
-            for value in option_values:
-                q_objects |= Q(variant_options__option__name=option_name, variant_options__value=value)
-            product_variants_queryset = product_variants_queryset.filter(q_objects)
-
-        # Construct options_dict to hold option values
-        options_dict = {}
-
         # When a category is selected, add unselected values to the options
-        if category_id:
+        if not category_id:
+            options_list = []
+        else:
+            options_dict = {}
             options = Option.objects.prefetch_related('variant_options').filter(category__id=category_id)
             for option in options:
                 unique_values = set(vo.value for vo in option.variant_options.all())
                 options_dict[option.name] = [
                     {'name': value, 'checked': value in selected_filters.get(option.name, [])} for value in unique_values
                 ]
+            # Iterate over each variant to collect option values
+            for variant in product_variants_queryset:
+                for option_value in variant.variant_options.all():
+                    option_name = option_value.option.name
+                    value_name = option_value.value
+                    if option_name not in options_dict:
+                        options_dict[option_name] = []
+                    if value_name not in [item['name'] for item in options_dict[option_name]]:
+                        options_dict[option_name].append(
+                            {'name': value_name, 'checked': value_name in selected_filters.get(option_name, [])}
+                        )
 
-        # Iterate over each variant to collect option values
-        for variant in product_variants_queryset:
-            for option_value in variant.variant_options.all():
-                option_name = option_value.option.name
-                value_name = option_value.value
-                if option_name not in options_dict:
-                    options_dict[option_name] = []
-                if value_name not in [item['name'] for item in options_dict[option_name]]:
-                    options_dict[option_name].append(
-                        {'name': value_name, 'checked': value_name in selected_filters.get(option_name, [])}
+            # Iterate over each option value to mark it as unavailable if not found in the queryset
+            for option_name, values_list in options_dict.items():
+                for value in values_list:
+                    value['available'] = any(
+                        value['name'] == option_value.value
+                        for variant in product_variants_queryset
+                        for option_value in variant.variant_options.filter(option__name=option_name)
                     )
 
-        # Iterate over each option value to mark it as unavailable if not found in the queryset
-        for option_name, values_list in options_dict.items():
-            for value in values_list:
-                value['available'] = any(
-                    value['name'] == option_value.value
-                    for variant in product_variants_queryset
-                    for option_value in variant.variant_options.filter(option__name=option_name)
-                )
+            # Construct options_list in the desired pattern
+            options_list = [{'option': option_name, 'values': values_list}
+                            for option_name, values_list in options_dict.items()]
 
-        # Construct options_list in the desired pattern
-        options_list = [{'option': option_name, 'values': values_list}
-                        for option_name, values_list in options_dict.items()]
+        paginator = Paginator(product_variants_queryset, per_page=self.paginate_by)
+        page = request.GET.get('page', 1)
+        page_obj = paginator.get_page(page)
 
         return render(request, self.product_template_partial, context={
-            'object_list': product_variants_queryset,
-            "options": options_list
+            "options": options_list,
+            'page_obj': page_obj,
         })
 
 
