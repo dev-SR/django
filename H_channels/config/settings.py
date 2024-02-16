@@ -29,10 +29,11 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django_browser_reload",  # new
-    'django_extensions',  # new
-    "compressor",  # new
-    "users",  # new
+    # 3rd party apps.........
+    'django_extensions',
+    "compressor",
+    # local apps.........
+    "users",
 ]
 
 MIDDLEWARE = [
@@ -43,8 +44,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "django_browser_reload.middleware.BrowserReloadMiddleware",  # new auto reload
+    "django.middleware.clickjacking.XFrameOptionsMiddleware"
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -161,8 +161,9 @@ if DEBUG:
     INTERNAL_IPS = [
         "127.0.0.1",
     ]
-    INSTALLED_APPS += ['debug_toolbar']
-    MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware']
+    INSTALLED_APPS += ['debug_toolbar', 'django_browser_reload']
+    MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware',
+                   "django_browser_reload.middleware.BrowserReloadMiddleware"]
 
 LOGIN_URL = "users/login"  # new
 

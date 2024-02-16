@@ -9,7 +9,6 @@ urlpatterns = [
     path("switch/", change_theme, name="change_theme"),
     path("", index, name='index'),
     path("", include('users.urls')),
-    path("__reload__/", include("django_browser_reload.urls"))
 ]
 
 if settings.DEBUG:
@@ -21,4 +20,5 @@ if settings.DEBUG:
     import debug_toolbar
     urlpatterns += [
         path('__debug__/', include(debug_toolbar.urls)),
+        path("__reload__/", include("django_browser_reload.urls"))
     ]
