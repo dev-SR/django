@@ -9,6 +9,10 @@ d# Django Channels + HTMX
 - [Implementing the WebSocket Client](#implementing-the-websocket-client)
   - [Sending Messages with HTMX](#sending-messages-with-htmx)
   - [Receiving Messages from WebSocket](#receiving-messages-from-websocket)
+- [Enabling a channel layer](#enabling-a-channel-layer)
+  - [Channels and groups:](#channels-and-groups)
+  - [Setting up a channel layer with Redis](#setting-up-a-channel-layer-with-redis)
+  - [Updating the consumer to broadcast messages](#updating-the-consumer-to-broadcast-messages)
 
 
 ## What is Django Channels?
@@ -222,4 +226,106 @@ The `ws_response.html` template contains the structure for displaying the receiv
 ```
 
 This template is used to format the message content received from the WebSocket. The `hx-swap-oob` attribute specifies where to insert the content. In this case, it's appending the message to the `#content` element.
+
+## Enabling a channel layer
+
+A channel layer is a kind of communication system. It allows multiple consumer instances to talk with each other, and with other parts of Django.
+
+### Channels and groups:
+
+Channel layers provide two abstractions to manage communications: `channels` and `groups`:
+
+- **Channel**:
+  - Represents a communication pathway between WebSocket clients and the server.
+  - Each channel(client) has a unique name. (`self.channel_name` in consumers)
+  - WebSocket clients send messages to specific channels, and consumers listen on these channels to receive messages.
+
+- **Group**:
+  - A collection of one or more channels(clients), grouped together for a common purpose- like conversations, chat rooms, or notifications.
+  - In this application, groups are used to logically group channels related to specific conversations.
+  - WebSocket clients joining a conversation get added to the corresponding conversation group.
+  - Messages sent within a conversation are broadcasted to all channels within the conversation group, allowing all participants to receive the message.
+
+<p align="center">
+<img src="img/channel_groups.jpg" alt="channel_groups.jpg" width="600px"/>
+</p>
+
+
+### Setting up a channel layer with Redis
+
+To enable a channel layer, you need to configure a channel backend. Django Channels supports several channel backends, including Redis, in-memory, and more.
+
+For this example, we'll use Redis as the channel backend. Install the `channels-redis` package:
+
+```bash
+pipenv install channels-redis
+```
+
+> Note that you need to have Redis installed and running on your system to use it as a channel backend.
+
+
+Edit the` settings.py` file of the educa project and add the following code to it:
+
+```python
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('127.0.0.1', 6379)],
+        },
+    },
+}
+```
+
+Open the Django shell using the following command: `python manage.py shell`
+
+To verify that the channel layer can communicate with Redis, write the following code to send a message to a test channel named `test_channel` and receive it back:
+
+
+```python
+import channels.layers
+from asgiref.sync import async_to_sync
+channel_layer = channels.layers.get_channel_layer()
+async_to_sync(channel_layer.send)('test_channel', {'message':'hello'})
+async_to_sync(channel_layer.receive)('test_channel')
+```
+
+### Updating the consumer to broadcast messages
+
+You will edit the `ChatConsumer` to utilize the channel layer, employing a channel group for each conversation. Each conversation's group name will be constructed using its unique conversation ID. ChatConsumer instances will be aware of the group name associated with their conversation, enabling communication among participants within the same conversation.
+
+Passing the conversation ID to the consumer is necessary to create the group name. You can do this by including the conversation ID in the WebSocket URL. For example, the URL could be `/ws/chat/1/`, where `1` is the conversation ID.
+
+Updated route def:
+
+```python
+from django.urls import path
+
+from . import consumers
+
+websocket_urlpatterns = [
+    path('ws/chat/<int:conversation_id>', consumers.ChatConsumer.as_asgi()),
+]
+```
+
+
+
+Here's the updated frontend code to connect to the WebSocket with the conversation ID:
+
+```html
+<div hx-ext="ws" ws-connect="/ws/chat/{{current_conversation.id}}" >
+    <form id="form" ws-send>
+        <input type="text" name="chat_message" id="chat_message" placeholder="Type a message...">
+    </form>
+</div>
+```
+
+Receive the conversation ID in the `ChatConsumer` and use it to create the group name:
+
+```python
+
+
+
+
+
 

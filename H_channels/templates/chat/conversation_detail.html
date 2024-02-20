@@ -40,7 +40,7 @@
                         </div>
                     {% endfor %}
                 </div>
-                <div hx-ext="ws" ws-connect="/ws/chat" class="sticky bottom-0 w-full">
+                <div hx-ext="ws" ws-connect="/ws/chat/{{current_conversation.id}}" class="sticky bottom-0 w-full">
                     <form id="form" ws-send class=" flex space-x-2 items-center mb-2">
                         <div class="flex w-full items-center max-w-xl mx-auto">
                             <div class="overflow-hidden flex-grow border dark:border-gray-600  dark:text-white rounded-2xl bg-white dark:bg-gray-900 ">

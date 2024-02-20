@@ -177,6 +177,14 @@ LOGIN_URL = "users/login"  # new
 # Django Channels [START]
 ASGI_APPLICATION = "config.asgi.application"
 
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('127.0.0.1', 6379)],
+        },
+    },
+}
 # Django Channels [END]
 
 if not DEBUG:

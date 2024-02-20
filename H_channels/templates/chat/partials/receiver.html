@@ -1,0 +1,11 @@
+<div hx-swap-oob="beforeend:#content">
+<div class="flex w-full mt-2 space-x-3 max-w-md">
+    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+    <div>
+        <div class="bg-gray-300 dark:bg-gray-600 p-3 rounded-r-lg rounded-bl-lg">
+            <p class="text-sm">{{ message.content|linebreaksbr|safe }}</p>
+        </div>
+        <span class="text-xs text-gray-700 dark:text-gray-300 leading-none ">{{ message.timestamp|date:"M d, Y" }} at {{ message.timestamp|time:"g:i A" }}</span>
+    </div>
+</div>
+</div>

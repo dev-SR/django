@@ -21,6 +21,7 @@ whitenoise = "*"
 gunicorn = "*"
 faker = "*"
 channels = {extras = ["daphne"], version = "*"}
+channels-redis = "*"
 
 [dev-packages]
 
