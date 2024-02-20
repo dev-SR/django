@@ -1,0 +1,103 @@
+{% extends "_base.html" %}
+{% block content %}
+    <div class="min-h-screen flex flex-col">
+        <div class="flex-1 flex flex-row">
+            <nav class="order-first  sm:w-52 bg-gray-200">
+                <h2 class="text-xl font-bold mb-4">My Conversations</h2>
+                <div class="flex flex-col space-y-4">
+                    {% for conversation in conversations %}
+                        <a href="{% url 'conversation_detail' conversation.pk %}"
+                           class="inline-block w-full bg-gray-300 hover:bg-gray-400 px-4 py-2 {% if conversation.id == request.resolver_match.kwargs.pk %}bg-blue-700 text-white{% endif %}">{{ conversation }}</a>
+                    {% endfor %}
+                </div>
+            </nav>
+            <main class="flex-1 flex h-full flex-col dark:bg-gray-900 dark:text-white">
+                <div class="flex-1 overflow-hidden px-20">
+                    <div id="content" class="flex flex-col flex-grow p-4 overflow-y-auto">
+                        {% for message in conversation.messages.all %}
+                            {% if message.sender == request.user %}
+                                <div hx-swap-oob="beforeend:#content">
+                                    <div class="flex w-full mt-2 space-x-3 max-w-xs ml-auto justify-end">
+                                        <div>
+                                            <div class="bg-blue-600 text-white p-3 rounded-l-lg rounded-br-lg">
+                                                <p class="text-sm">{{ message.content|linebreaksbr|safe }}</p>
+                                            </div>
+                                            <span class="text-xs text-gray-700 dark:text-gray-300 leading-none ">{{ message.timestamp|date:"M d, Y" }} at {{ message.timestamp|time:"g:i A" }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="flex w-full mt-2 space-x-3 max-w-xs">
+                                    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+                                    <div>
+                                        <div class="bg-gray-300 dark:bg-gray-600 p-3 rounded-r-lg rounded-bl-lg">
+                                            <p class="text-sm">{{ message.content|linebreaksbr|safe }}</p>
+                                        </div>
+                                        <span class="text-xs text-gray-700 dark:text-gray-300 leading-none ">{{ message.timestamp|date:"M d, Y" }} at {{ message.timestamp|time:"g:i A" }}</span>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                <div hx-ext="ws" ws-connect="/chat" class="sticky bottom-0  w-full">
+                    <form id="form" ws-send class="relative flex space-x-2 items-center mb-2">
+                        <div class="flex w-full items-center max-w-xl mx-auto">
+                            <div class="overflow-hidden flex-grow relative border dark:border-gray-600  dark:text-white rounded-2xl bg-white dark:bg-gray-900 ">
+                                <textarea id="input"
+                                          name="chat_message"
+                                          placeholder="Send a message..."
+                                          class="m-0 w-full resize-none border-0 bg-transparent focus:ring-0 focus-visible:ring-0 dark:bg-transparent pr-10 md:py-3.5 md:pr-12 placeholder-black/50 dark:placeholder-white/50 pl-3 md:pl-4"
+                                          style="height: 48px;
+                                                 overflow: hidden"
+                                          oninput="autoGrow(this)"></textarea>
+                            </div>
+                            <button class="absolute bottom-2 right-2 rounded-lg border border-black bg-black p-0.5 text-white transition-colors dark:border-white dark:bg-white dark:hover:bg-white md:bottom-3 md:right-3">
+                                <span>
+                                    <svg width="24"
+                                         height="24"
+                                         viewBox="0 0 24 24"
+                                         fill="none"
+                                         class="text-white dark:text-black">
+                                        <path d="M7 11L12 6L17 11M12 18V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        </path>
+                                    </svg>
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <script>
+            window.addEventListener('load', () => {
+                const messageContent = document.getElementById('content');
+                setTimeout(() => {
+                    window.scrollTo({
+                        top: messageContent.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                }, 10);
+            });
+            document.body.addEventListener('htmx:wsAfterMessage', (event) => {
+                const messageContent = document.getElementById('content');
+                window.scrollTo({
+                    top: messageContent.scrollHeight,
+                    behavior: 'smooth'
+                });
+
+                const textArea = document.getElementById('input');
+                textArea.value = '';
+                textArea.style.height = '52px';
+            });
+            function autoGrow(textarea) {
+                const lines = textarea.value.split('\n');
+                if (lines.length < 2) {
+                    return;
+                }
+                textarea.style.height = 'auto';
+                textarea.style.height = textarea.scrollHeight + 'px';
+            }
+                </script>
+            </main>
+        </div>
+    </div>
+{% endblock content %}

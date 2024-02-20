@@ -23,17 +23,24 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1').split(',')
 # Application definition
 
 INSTALLED_APPS = [
+    # 3rd party apps.........
+    "daphne",
+    # default apps.........
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # additional apps.........
+    # 'django.contrib.humanize',
     # 3rd party apps.........
+    "channels",
     'django_extensions',
     "compressor",
     # local apps.........
     "users",
+    "chat"
 ]
 
 MIDDLEWARE = [
@@ -167,6 +174,10 @@ if DEBUG:
 
 LOGIN_URL = "users/login"  # new
 
+# Django Channels [START]
+ASGI_APPLICATION = "config.asgi.application"
+
+# Django Channels [END]
 
 if not DEBUG:
     # log in console

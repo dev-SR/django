@@ -1,190 +1,130 @@
-# Django + TailwindCSS + HTMX
+# Django Channels + HTMX
+
+## What is Django Channels?
+
+Django Channels, often referred to as just Channels, enhances Django's capabilities by enabling the handling of not only HTTP but also protocols requiring long-lived connections like WebSockets, MQTT for IoT applications, chatbots, real-time notifications, and more. It seamlessly integrates with Django's core features such as authentication and sessions.
+
+A typical Channels setup involves:
+
+<p align="center">
+<img src="img/django-channels-generic-architecture-overview.jpg" alt="django-channels-generic-architecture-overview.jpg" width="700px"/>
+</p>
+## Sync vs Async
+Channels necessitates frequent transitions between synchronous and asynchronous code execution due to the differences between Channels and Django. For instance, while accessing the Django database, synchronous code is required, whereas interaction with the Channels channel layer mandates asynchronous code.
+
+To facilitate this transition, Django provides built-in asgiref functions:
+
+- `sync_to_async`: Converts a synchronous function into an asynchronous one.
+- `async_to_sync`: Converts an asynchronous function into a synchronous one.
+
+These utilities streamline the integration of synchronous and asynchronous code within a Channels-powered Django application.
 
 
-## Setup
+## Install and setup channels
 
-- [https://www.geeksforgeeks.org/how-to-use-tailwind-css-with-django/](https://www.geeksforgeeks.org/how-to-use-tailwind-css-with-django/)
-- [https://testdriven.io/blog/django-htmx-tailwind/](https://testdriven.io/blog/django-htmx-tailwind/)
-- [https://flowbite.com/docs/getting-started/django/](https://flowbite.com/docs/getting-started/django/)
+To integrate WebSocket functionality into our Django project, we'll utilize Django Channels, a package that extends Django's capabilities to handle long-running connections and asynchronous protocols like WebSockets.
+
+Begin by installing Django Channels along with Daphne, which serves as the web server gateway interface for asynchronous web applications:
 
 ```bash
-pnpm init
-pnpm install -D tailwindcss
-npx tailwindcss init
-mkdir .venv
-pipenv install django django-compressor django-browser-reload django-extensions ipython bpython
-pipenv shell
-# using venv...
-# python -m venv .venv
-# .\.venv\Scripts\activate
+pip install -U channels["daphne"]
 ```
 
-```bash
-django-admin startproject core .
-python manage.py makemigrations
-python manage.py migrate
-python manage.py runserver
-```
-
-### Tailwindcss
-
-Requirements:`Django Compressor`
-
-Django Compressor is an extension designed for managing (compressing/caching) static assets in a Django application. With it, you create a simple asset pipeline for:
-
-- Combining and minifying multiple CSS and JavaScript files down to a single file for each
-- Creating asset bundles for use in your templates
+This command installs the latest versions of both Django Channels and Daphne.
 
 
-1. Add `compressor` to the installed apps inside the `settings.py` file:
+Additionally, ensure that both `channels` and `daphne` are added to the `INSTALLED_APPS` configuration of your Django project. It's essential to prioritize the `daphne` app by placing it at the top of the list of applications.
+Also add `ASGI_APPLICATION` to the settings file.
 
 
 ```python
-# config/settings.py
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'compressor',  # new
+    "daphne",
+    # ...
+    # ...
+    "channels",
 ]
+
+ASGI_APPLICATION = "config.asgi.application"
 ```
 
-2. Configure the `compressor` inside the `settings.py` file:
+
+Since we'll be using WebSockets instead of HTTP to communicate from the client to the server, we need to wrap our ASGI config with `ProtocolTypeRouter` in `config/asgi.py`:
 
 
 ```python
-# default / The list of finder backends that know how to find static files in various locations.
-STATICFILES_FINDERS = [
-    "django.contrib.staticfiles.finders.FileSystemFinder",
-    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
-]
+import os
+from channels.routing import ProtocolTypeRouter
+from django.core.asgi import get_asgi_application
 
-# django-compressor
-COMPRESS_ROOT = BASE_DIR / "static"
-COMPRESS_ENABLED = True
-STATICFILES_FINDERS += ["compressor.finders.CompressorFinder"]
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
+application = ProtocolTypeRouter({
+'http': get_asgi_application(),
+})
 ```
 
-3. Enable root-level templates :create a new `templates/` directory inside the project folder and update `settings.py` folder:
+## WebSocket consumer
+
+Although Django Channels is based on a simple low-level specification called ASGI, it is more suited for interoperability than developing sophisticated applications. To make ASGI applications quickly, Channels offers your `Consumers` a rich abstraction.
+
+`Consumers` (the equivalent of Django views) are ASGI applications. Consumers do a couple of things in particular:
+
+- Structure your code as functions that are called whenever an event happens (as opposed to forcing you to write event loops).
+- Allow you to write both sync, as well as async code.
+
+Here’s a basic example of a sync consumer which accepts incoming WebSocket connections and then sends a message:
+
+### Adding Routers for WebSocket connections
+
+Next, add the following code to a new file named `example_channels/routing.py` to configure routes, which function almost identically to Django URL configuration:
 
 ```python
-# config/settings.py
-TEMPLATES = [
-    {
-        ...
-        'DIRS': [BASE_DIR / 'templates'], # new
-        ...
-    },
+from django.urls import path
+from chat import consumers
+
+websocket_urlpatterns = [
+    path('chat/<str:room_slug>/', consumers.ChatConsumer.as_asgi()),
 ]
 ```
 
-4. Create two new folders and an `input.css` file inside the `static/src/` folder:
+### Setting up ASGI Application
 
-```css
-/* static/src/input.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
+Register the `routing.py` file inside `config/asgi.py`:
+
+```python
+from chat import routing
+import os
+from django.core.asgi import get_asgi_application
+from channels.auth import AuthMiddlewareStack
+from channels.routing import ProtocolTypeRouter, URLRouter
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+
+
+application = ProtocolTypeRouter({
+    'http': get_asgi_application(),
+    "websocket": AuthMiddlewareStack(
+        URLRouter(
+            routing.websocket_urlpatterns
+        )
+    )
+})
+
 ```
 
-
-5. Update `tailwind.config.js` like so:
-
-
-```typescript
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-	content: [
-		// Templates within theme app (e.g. base.html)
-		'./templates/**/*.html',
-		// Templates in other apps
-		'./../templates/**/*.html'
-		// // Include JavaScript files that might contain Tailwind CSS classes
-		// '../../**/*.js',
-		// // Include Python files that might contain Tailwind CSS classes
-		// '../../**/*.py'
-	],
-	theme: {
-		extend: {}
-	},
-	plugins: []
-};
-```
-
-6. Run the following command to watch for changes and compile the Tailwind CSS code:
-
-```json
-"scripts": {
-	"dev:css": "tailwindcss -i ./static/src/input.css -o ./static/src/output.css --minify --watch"
-},
-```
-
-7. Load precessed `output.css` in `templates\_base.html`
-
-`templates\_base.html`
-
-```html
-{% load compress %} {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>{% block page_title %}Django + Tailwind CSS + HTMX{% endblock page_title %}</title>
-		{% compress css %}
-		<link rel="stylesheet" href="{% static 'src/output.css' %}" />
-		<!-- HTMX start -->
-		{% endcompress %}
-	</head>
-	<body>
-		{% block content %} {% endblock content %}
-	</body>
-</html>
-```
+class ChatConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        await self.accept()
+        print("*" * 50)
+        print("You are connected to websocket")
 
 
-### HTMX
 
-1. Download `https://unpkg.com/htmx.org@1.9.10/dist/htmx.js` and save to `static/src`
-2. Load `htmx.js` in `_base.html` also set header to use crf_token
+<!--
+
+With Channels now in our project, we proceed to configure the `CHANNEL_LAYERS` setting to specify the backend, which can be Redis, In-Memory, or others.
 
 
-`templates\_base.html`
-
-```html
-{% load compress %} {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>{% block page_title %}Django + Tailwind CSS + HTMX{% endblock page_title %}</title>
-		{% compress css %}
-		<link rel="stylesheet" href="{% static 'src/output.css' %}" />
-		{% endcompress %}
-		<!-- HTMX start -->
-		{% compress js %}
-		<script type="text/javascript" src="{% static 'src/htmx.js' %}"></script>
-		{% endcompress %}
-		<!-- HTMX end-->
-	</head>
-	<body>
-		{% block content %} {% endblock content %}
-		<!-- HTMX start -->
-
-		<script>
-			document.body.addEventListener('htmx:configRequest', (event) => {
-				event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
-			});
-		</script>
-		<!-- HTMX end-->
-	</body>
-</html>
-```
-
+With these steps completed, Django Channels is now integrated into your project, ready to handle WebSocket connections efficiently. -->
