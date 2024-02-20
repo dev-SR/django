@@ -222,3 +222,4 @@ The `ws_response.html` template contains the structure for displaying the receiv
 ```
 
 This template is used to format the message content received from the WebSocket. The `hx-swap-oob` attribute specifies where to insert the content. In this case, it's appending the message to the `#content` element.
+
