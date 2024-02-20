@@ -1,49 +1,49 @@
 {% extends "_base.html" %}
 {% block content %}
-    <div class="min-h-screen flex flex-col">
+    <div class="min-h-screen flex flex-col dark:bg-gray-900 dark:text-white">
         <div class="flex-1 flex flex-row">
-            <nav class="order-first  sm:w-52 bg-gray-200">
-                <h2 class="text-xl font-bold mb-4">My Conversations</h2>
+            <nav class="order-first  sm:w-52 bg-gray-200 dark:bg-gray-800">
+                <h2 class="text-xl font-bold mb-4 dark:text-white">My Conversations</h2>
                 <div class="flex flex-col space-y-4">
                     {% for conversation in conversations %}
                         <a href="{% url 'conversation_detail' conversation.pk %}"
-                           class="inline-block w-full bg-gray-300 hover:bg-gray-400 px-4 py-2 {% if conversation.id == request.resolver_match.kwargs.pk %}bg-blue-700 text-white{% endif %}">{{ conversation }}</a>
+                           class="inline-block w-full   px-4 py-2 {% if conversation.id == current_conversation.id %}bg-blue-700 hover:bg-blue-600 text-white {% else %} bg-gray-300 dark:bg-gray-700  hover:bg-gray-400 dark:hover:bg-gray-600{% endif %}">{{ conversation }}</a>
                     {% endfor %}
                 </div>
             </nav>
-            <main class="flex-1 flex h-full flex-col dark:bg-gray-900 dark:text-white">
-                <div class="flex-1 overflow-hidden px-20">
-                    <div id="content" class="flex flex-col flex-grow p-4 overflow-y-auto">
-                        {% for message in conversation.messages.all %}
-                            {% if message.sender == request.user %}
-                                <div hx-swap-oob="beforeend:#content">
-                                    <div class="flex w-full mt-2 space-x-3 max-w-xs ml-auto justify-end">
-                                        <div>
-                                            <div class="bg-blue-600 text-white p-3 rounded-l-lg rounded-br-lg">
-                                                <p class="text-sm">{{ message.content|linebreaksbr|safe }}</p>
-                                            </div>
-                                            <span class="text-xs text-gray-700 dark:text-gray-300 leading-none ">{{ message.timestamp|date:"M d, Y" }} at {{ message.timestamp|time:"g:i A" }}</span>
-                                        </div>
+            <main class="flex-1 relative flex flex-col">
+                <div id="content" class="flex flex-col flex-grow p-4 overflow-y-auto">
+                    {% for message in current_conversation.messages.all %}
+                        {% if message.sender == request.user %}
+                            <div class="flex w-full mt-2 space-x-3 max-w-md ml-auto justify-end">
+                                <div>
+                                    <div class="bg-blue-600 text-white p-3 rounded-l-lg rounded-br-lg">
+                                        <p class="text-sm">{{ message.content|linebreaksbr|safe }}</p>
                                     </div>
+                                    <span class="text-xs text-gray-700 dark:text-gray-300 leading-none ">{{ message.timestamp|date:"M d, Y" }} at {{ message.timestamp|time:"g:i A" }}</span>
                                 </div>
-                            {% else %}
-                                <div class="flex w-full mt-2 space-x-3 max-w-xs">
-                                    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></div>
-                                    <div>
-                                        <div class="bg-gray-300 dark:bg-gray-600 p-3 rounded-r-lg rounded-bl-lg">
-                                            <p class="text-sm">{{ message.content|linebreaksbr|safe }}</p>
-                                        </div>
-                                        <span class="text-xs text-gray-700 dark:text-gray-300 leading-none ">{{ message.timestamp|date:"M d, Y" }} at {{ message.timestamp|time:"g:i A" }}</span>
+                            </div>
+                        {% else %}
+                            <div class="flex w-full mt-2 space-x-3 max-w-md">
+                                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+                                <div>
+                                    <div class="bg-gray-300 dark:bg-gray-600 p-3 rounded-r-lg rounded-bl-lg">
+                                        <p class="text-sm">{{ message.content|linebreaksbr|safe }}</p>
                                     </div>
+                                    <span class="text-xs text-gray-700 dark:text-gray-300 leading-none ">{{ message.timestamp|date:"M d, Y" }} at {{ message.timestamp|time:"g:i A" }}</span>
                                 </div>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
+                            </div>
+                        {% endif %}
+                    {% empty %}
+                        <div class="flex-1 self-stretch flex w-full justify-center">
+                            <p class="text-gray-500 dark:text-gray-300">No messages yet</p>
+                        </div>
+                    {% endfor %}
                 </div>
-                <div hx-ext="ws" ws-connect="/chat" class="sticky bottom-0  w-full">
-                    <form id="form" ws-send class="relative flex space-x-2 items-center mb-2">
+                <div hx-ext="ws" ws-connect="/ws/chat" class="sticky bottom-0 w-full">
+                    <form id="form" ws-send class=" flex space-x-2 items-center mb-2">
                         <div class="flex w-full items-center max-w-xl mx-auto">
-                            <div class="overflow-hidden flex-grow relative border dark:border-gray-600  dark:text-white rounded-2xl bg-white dark:bg-gray-900 ">
+                            <div class="overflow-hidden flex-grow border dark:border-gray-600  dark:text-white rounded-2xl bg-white dark:bg-gray-900 ">
                                 <textarea id="input"
                                           name="chat_message"
                                           placeholder="Send a message..."
@@ -52,7 +52,8 @@
                                                  overflow: hidden"
                                           oninput="autoGrow(this)"></textarea>
                             </div>
-                            <button class="absolute bottom-2 right-2 rounded-lg border border-black bg-black p-0.5 text-white transition-colors dark:border-white dark:bg-white dark:hover:bg-white md:bottom-3 md:right-3">
+                            <button class="absolute bottom-2 right-2 rounded-lg border border-black bg-black p-0.5 text-white transition-colors dark:border-white dark:bg-white dark:hover:bg-white md:bottom-3 md:right-3"
+                                    type="submit">
                                 <span>
                                     <svg width="24"
                                          height="24"

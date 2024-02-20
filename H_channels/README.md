@@ -1,4 +1,15 @@
-# Django Channels + HTMX
+d# Django Channels + HTMX
+
+- [What is Django Channels?](#what-is-django-channels)
+- [Sync vs Async](#sync-vs-async)
+- [Install and setup channels](#install-and-setup-channels)
+- [WebSocket consumer](#websocket-consumer)
+  - [Adding Routers for WebSocket connections](#adding-routers-for-websocket-connections)
+  - [Setting up ASGI Application](#setting-up-asgi-application)
+- [Implementing the WebSocket Client](#implementing-the-websocket-client)
+  - [Sending Messages with HTMX](#sending-messages-with-htmx)
+  - [Receiving Messages from WebSocket](#receiving-messages-from-websocket)
+
 
 ## What is Django Channels?
 
@@ -66,14 +77,46 @@ application = ProtocolTypeRouter({
 
 ## WebSocket consumer
 
-Although Django Channels is based on a simple low-level specification called ASGI, it is more suited for interoperability than developing sophisticated applications. To make ASGI applications quickly, Channels offers your `Consumers` a rich abstraction.
+Consumers are the equivalent of Django views for asynchronous applications. As mentioned, they handle WebSockets in a very similar way to how traditional views handle HTTP requests. Consumers are ASGI applications that can handle messages, notifications, and other things. Unlike Django views, consumers are built for longrunning communication. URLs are mapped to consumers through routing classes that allow you to combine and stack consumers.
 
-`Consumers` (the equivalent of Django views) are ASGI applications. Consumers do a couple of things in particular:
+Create a new file inside the `chat` application directory and name it `consumers.py`.
+Add the following code to it:
 
-- Structure your code as functions that are called whenever an event happens (as opposed to forcing you to write event loops).
-- Allow you to write both sync, as well as async code.
 
-Here’s a basic example of a sync consumer which accepts incoming WebSocket connections and then sends a message:
+```python
+from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from django.template.loader import render_to_string
+
+class ChatConsumer(AsyncJsonWebsocketConsumer):
+    async def connect(self):
+        # accept connection
+        await self.accept()
+        print("*" * 50)
+        print("You are connected to websocket")
+
+    # receive messages
+    async def receive_json(self, data):
+        print("*" * 50)
+        print("WebSocket received data:")
+        print(data)
+        try:
+            chat_message = data.get('chat_message')
+            print(chat_message)
+            if not chat_message:
+                # Handle case where chat message is not present in data
+                return
+
+            # Render template with message and time
+            html = render_to_string("chat/partials/ws_response.html",
+                                    {'message': chat_message})
+
+            # Send HTML response via WebSocket
+            await self.send(text_data=html)
+
+        except Exception as e:
+            # Log any errors for debugging
+            print(f"Error occurred: {e}")
+```
 
 ### Adding Routers for WebSocket connections
 
@@ -81,10 +124,11 @@ Next, add the following code to a new file named `example_channels/routing.py` t
 
 ```python
 from django.urls import path
-from chat import consumers
+
+from . import consumers
 
 websocket_urlpatterns = [
-    path('chat/<str:room_slug>/', consumers.ChatConsumer.as_asgi()),
+    path('ws/chat', consumers.ChatConsumer.as_asgi()),
 ]
 ```
 
@@ -111,20 +155,70 @@ application = ProtocolTypeRouter({
         )
     )
 })
-
 ```
 
-class ChatConsumer(AsyncWebsocketConsumer):
-    async def connect(self):
-        await self.accept()
-        print("*" * 50)
-        print("You are connected to websocket")
 
+## Implementing the WebSocket Client
 
+In the provided code snippet, a WebSocket client is implemented using JavaScript. Let's break down the implementation:
 
-<!--
+```html
+<script>
+    var url = 'ws://' + window.location.host +'/ws/chat';
+    var chatSocket = new WebSocket(url);
+</script>
+```
 
-With Channels now in our project, we proceed to configure the `CHANNEL_LAYERS` setting to specify the backend, which can be Redis, In-Memory, or others.
+Here's what's happening:
 
+- `url` variable: It is set to the WebSocket URL. The URL is composed of the current host (`window.location.host`) and the WebSocket endpoint (`/ws/chat`). This endpoint should match the URL pattern defined in the `routing.py` file on the server side.
 
-With these steps completed, Django Channels is now integrated into your project, ready to handle WebSocket connections efficiently. -->
+- `chatSocket` variable: It initializes a new WebSocket object connecting to the specified URL. This establishes the WebSocket connection to the server.
+
+### Sending Messages with HTMX
+
+To integrate HTMX with WebSocket for sending and receiving messages, you can utilize HTMX's WebSocket extension.
+
+```html
+<div id="content"></div>
+<div hx-ext="ws" ws-connect="/ws/chat">
+    <form id="form" ws-send>
+        <input type="text" name="chat_message" id="chat_message" placeholder="Type a message...">
+    </form>
+</div>
+```
+
+Here's how it works:
+
+- `hx-ext="ws"` attribute: Enables the WebSocket extension for HTMX.
+
+- `ws-connect="/ws/chat"` attribute: Specifies the WebSocket URL to connect to. This URL should match the WebSocket URL pattern defined in the server-side routing.
+
+- `ws-send` attribute: Indicates that when the form is submitted, the form values will be sent to the nearest enclosing WebSocket connection. In this case, it will send the data to the `/ws/chat` endpoint.
+
+### Receiving Messages from WebSocket
+
+On the server-side, when a message is received from the WebSocket, the `ChatConsumer` class handles it. After processing the message, it sends back HTML response via the WebSocket.
+
+```python
+async def receive_json(self, data):
+        # Process received data
+
+        # Render HTML response
+        html = render_to_string("chat/partials/ws_response.html",{'message': chat_message})
+
+        # Send HTML response via WebSocket
+        await self.send(text_data=html)
+```
+
+The `ws_response.html` template contains the structure for displaying the received message content.
+
+```html
+<div hx-swap-oob="beforeend:#content">
+    <div>
+        {{ message }}
+    </div>
+</div>
+```
+
+This template is used to format the message content received from the WebSocket. The `hx-swap-oob` attribute specifies where to insert the content. In this case, it's appending the message to the `#content` element.

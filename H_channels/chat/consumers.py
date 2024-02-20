@@ -1,13 +1,13 @@
-import json
 import datetime
-from channels.generic.websocket import AsyncWebsocketConsumer, AsyncJsonWebsocketConsumer
-from django.template.loader import get_template
-from django.template.loader import render_to_string
 from pprint import pprint
+
+from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from django.template.loader import render_to_string
 
 
 class ChatConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
+        # accept connection
         await self.accept()
         print("*" * 50)
         print("You are connected to websocket")
@@ -39,6 +39,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
             # Send HTML response via WebSocket
             await self.send(text_data=html)
+
         except Exception as e:
             # Log any errors for debugging
             print(f"Error occurred: {e}")

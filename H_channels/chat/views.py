@@ -9,7 +9,7 @@ from .models import Conversation
 class ConversationDetailView(LoginRequiredMixin, DetailView):
     model = Conversation
     template_name = 'chat/conversation_detail.html'
-    context_object_name = 'conversation'
+    context_object_name = 'current_conversation'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

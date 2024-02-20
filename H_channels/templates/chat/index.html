@@ -1,13 +1,13 @@
 {% extends "_base.html" %}
 {% block content %}
-    <div class="min-h-screen flex flex-col">
+    <div class="min-h-screen flex flex-col dark:bg-gray-900 dark:text-white">
         <div class="flex-1 flex flex-row">
-            <nav class="order-first  sm:w-52 bg-gray-200">
+            <nav class="order-first  sm:w-52 bg-gray-200 dark:bg-gray-800">
                 <h2 class="text-xl font-bold mb-4">My Conversations</h2>
                 <div class="flex flex-col space-y-4">
                     {% for conversation in conversations %}
                         <a href="{% url 'conversation_detail' conversation.pk %}"
-                           class="inline-block w-full bg-gray-300 hover:bg-gray-400 px-4 py-2 ">{{ conversation }}</a>
+                           class="inline-block w-full bg-gray-300 dark:bg-gray-700  hover:bg-gray-400 dark:hover:bg-gray-600 px-4 py-2 ">{{ conversation }}</a>
                     {% endfor %}
                 </div>
             </nav>
