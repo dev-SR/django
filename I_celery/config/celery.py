@@ -5,19 +5,19 @@ from celery import Celery
 # this is also used in manage.py
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
-app = Celery('config')
+celery = Celery('config')
 
 # Using a string here means the worker don't have to serialize
 # the configuration object to child processes.
 # - namespace='CELERY' means all celery-related configuration keys
 #   should have a `CELERY_` prefix.
-app.config_from_object('django.conf:settings', namespace='CELERY')
+celery.config_from_object('django.conf:settings', namespace='CELERY')
 
-# Load task modules from all registered Django app configs.
-app.autodiscover_tasks()
+# Load `tasks.py` modules from all registered Django apps
+celery.autodiscover_tasks()
 
 # We used CELERY_BROKER_URL in settings.py instead of:
-# app.conf.broker_url = ''
+# celery.conf.broker_url = ''
 
 # We used CELERY_BEAT_SCHEDULER in settings.py instead of:
-# app.conf.beat_scheduler = ''django_celery_beat.schedulers.DatabaseScheduler'
+# celery.conf.beat_scheduler = ''django_celery_beat.schedulers.DatabaseScheduler'

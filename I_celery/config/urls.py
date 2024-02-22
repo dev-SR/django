@@ -9,6 +9,7 @@ urlpatterns = [
     path("switch/", change_theme, name="change_theme"),
     path("", index, name='index'),
     path("", include('users.urls')),
+    path("", include('status.urls')),
 ]
 
 if settings.DEBUG:

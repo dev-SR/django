@@ -25,6 +25,7 @@ channels-redis = "*"
 django-celery-beat = "*"
 django-celery-results = "*"
 redis = "*"
+gevent = "*"
 
 [dev-packages]
 

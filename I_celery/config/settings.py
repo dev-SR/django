@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django_celery_results',
     # local apps.........
     "users",
+    "status"
 ]
 
 MIDDLEWARE = [
