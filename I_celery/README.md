@@ -6,6 +6,9 @@
     - [Workflow](#workflow)
     - [Configure Celery](#configure-celery)
   - [Creating and Executing tasks](#creating-and-executing-tasks)
+  - [Integrate Celery with Django Channels +  HTMX websocket](#integrate-celery-with-django-channels---htmx-websocket)
+    - [Setup websocket](#setup-websocket)
+    - [Minimal Websocket + Celery](#minimal-websocket--celery)
 
 ## Introduction
 
@@ -195,4 +198,133 @@ def check_status(request):
     send_status.delay("payload")
 
     return render(request, 'index.html', context)
+```
+
+
+## Integrate Celery with Django Channels +  HTMX websocket
+
+### Setup websocket
+
+Consumer:
+
+```python
+class ChatConsumer(AsyncJsonWebsocketConsumer):
+    async def connect(self):
+        self.group_name = 'status'
+        # accept connection
+        await self.accept()
+        # Join conversation group
+        await self.channel_layer.group_add(
+            self.group_name,
+            self.channel_name
+        )  # adding the client/channel to the group
+
+        # Send message to WebSocket
+        await self.channel_layer.group_send(
+            self.group_name,
+            {
+                'type': 'send_status',
+                'status': 'RUNNING'
+            }
+        )
+
+    async def send_status(self, event):
+        # Send message to WebSocket
+        status = event['status']
+        print("Sending status to websocket...", status)
+        html = render_to_string("status/partials/current_status.html", {"status": status})
+        # Send HTML response via WebSocket
+        await self.send(text_data=html)
+
+```
+
+Htmx:
+
+```html
+{% extends "_base.html" %}
+{% block content %}
+    <main class="flex flex-col items-center justify-center min-h-screen dark:bg-gray-900">
+        <div hx-ext="ws" ws-connect="/ws/status">
+            Current Status: <span id="status"></span>
+        </div>
+    </main>
+{% endblock content %}
+```
+
+`status/partials/current_status.html`
+
+```html
+<span id="status">{{ status }}</span>
+```
+
+### Minimal Websocket + Celery
+
+
+Consumer:
+
+```python
+from status.tasks import send_status_periodically
+
+class ChatConsumer(AsyncJsonWebsocketConsumer):
+    async def connect(self):
+        print("*" * 50)
+        print("You are connected to websocket")
+        self.group_name = 'status'
+        # accept connection
+        await self.accept()
+
+        # Join conversation group
+        await self.channel_layer.group_add(
+            self.group_name,
+            self.channel_name
+        )  # adding the client/channel to the group
+
+        # Send status to the client
+        send_status_periodically.delay()
+
+    #     await self.channel_layer.group_send(
+    #         self.group_name,
+    #         {
+    #             'type': 'send_status',
+    #             'status': 'RUNNING'
+    #         }
+    #     )
+
+    async def send_status(self, event):
+        # Send message to WebSocket
+        status = event['status']
+        print("Sending status to websocket...", status)
+        html = render_to_string("status/partials/current_status.html", {"status": status})
+        # Send HTML response via WebSocket
+        await self.send(text_data=html)
+
+    async def disconnect(self, close_code):
+        # Leave conversation group
+        await self.channel_layer.group_discard(
+            self.group_name,
+            self.channel_name
+        )
+```
+
+`tasks.py`
+
+```python
+@shared_task
+def send_status_periodically(num_iterations=5):
+    channel_layer = get_channel_layer()
+    statuses = ['RUNNING', 'FINISHED']
+    iteration = 0
+
+    while iteration < num_iterations:
+        status_index = iteration % 2
+        status = statuses[status_index]
+        async_to_sync(channel_layer.group_send)( # Send message to WebSocket
+            'status',
+            {
+                'type': 'send_status',
+                'status': status
+            }
+        )
+        iteration += 1
+        time.sleep(5)  # Sleep for 5 seconds before sending the next status
 ```
