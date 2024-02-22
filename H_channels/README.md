@@ -181,6 +181,9 @@ Here's what's happening:
 
 ### Sending Messages with HTMX
 
+- Remember to add websocket extension to base template `<script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+`
+
 To integrate HTMX with WebSocket for sending and receiving messages, you can utilize HTMX's WebSocket extension.
 
 ```html
