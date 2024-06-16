@@ -18,6 +18,7 @@ python-dotenv = "*"
 dj-database-url = "*"
 psycopg2 = "*"
 djangorestframework = "*"
+django-filter = "*"
 
 [dev-packages]
 

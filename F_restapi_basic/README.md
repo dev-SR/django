@@ -4,18 +4,27 @@
   - [Installation](#installation)
   - [Introduction](#introduction)
     - [Serializers](#serializers)
-    - [Quick Examples](#quick-examples)
-    - [Implement Non Primary Key Based CRUD Operations](#implement-non-primary-key-based-crud-operations)
-    - [Implement Primary Key Based CRUD Operations](#implement-primary-key-based-crud-operations)
+    - [Basic RestApi CRUD Operations using DRF.](#basic-restapi-crud-operations-using-drf)
   - [Mixin in DRF](#mixin-in-drf)
     - [Mixin for List and Create (non primary key based CRUD)](#mixin-for-list-and-create-non-primary-key-based-crud)
     - [Mixin for Retrieve, Update and Destroy (primary key based CRUD)](#mixin-for-retrieve-update-and-destroy-primary-key-based-crud)
   - [Concrete View](#concrete-view)
     - [For List and Create (non primary key based CRUD)](#for-list-and-create-non-primary-key-based-crud)
     - [For Retrieve, Update and Destroy (primary key based CRUD)](#for-retrieve-update-and-destroy-primary-key-based-crud)
-  - [ViewSet](#viewset)
-    - [ModelViewSet](#modelviewset)
-      - [Customizing the ModelViewSet](#customizing-the-modelviewset)
+  - [ViewSets](#viewsets)
+    - [ModelViewSets and Router](#modelviewsets-and-router)
+  - [Pagination, search and filtering](#pagination-search-and-filtering)
+    - [Pagination](#pagination)
+      - [Global Pagination](#global-pagination)
+      - [Custom pagination on an individual view](#custom-pagination-on-an-individual-view)
+    - [Filtering](#filtering)
+    - [Searching](#searching)
+    - [Sorting](#sorting)
+  - [More on  Serializer](#more-on--serializer)
+    - [Changing output of the serializer](#changing-output-of-the-serializer)
+    - [Nested Serializer](#nested-serializer)
+  - [Customizing the ModelViewSet](#customizing-the-modelviewset)
+  - [Multiple route parameters](#multiple-route-parameters)
   - [Token Authentication](#token-authentication)
     - [Configure Token Authentication](#configure-token-authentication)
     - [Automatically generate token for new user using signals](#automatically-generate-token-for-new-user-using-signals)
@@ -64,81 +73,50 @@ Django QuerySets and model instances are Django-specific and, as such, not unive
 <img src="img/serializer.jpg" alt="serializer.jpg" width="600px"/>
 </p>
 
-### Quick Examples
+Readings:
 
-To specify how incoming and outgoing data gets serialized and deserialized, you create a [SomeResource]Serializer class. So, if you have a Task model, you'd create a TaskSerializer class.
+- [https://testdriven.io/blog/drf-serializers](https://testdriven.io/blog/drf-serializers)
 
-For example:
+### Basic RestApi CRUD Operations using DRF.
 
-```python
-# model
-class Task(models.Model):
-    title = models.CharField(max_length=200)
-    description = models.TextField()
-    completed = models.BooleanField(default=False)
-
-
-# basic serializer
-class TaskSerializer(serializers.Serializer):
-    title = serializers.CharField()
-    description = serializers.CharField()
-    completed = serializers.BooleanField()
-```
-
-Similarly to how Django forms are created, when the serialization is closely coupled to the model, you can extend from `ModelSerializer`:
+`models.py`
 
 ```python
-class TaskSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Task
-        fields = "__all__"
+from django.db import models
+class Category(models.Model):
+    name = models.CharField(max_length=255)
 ```
-
-You can easily adapt a ModelSerializer to your needs:
-
-```python
-class TaskSerializer(serializers.ModelSerializer):
-    short_description = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Task
-        fields = ["title", "description", "completed", "short_description"]
-        read_only_fields = ['completed']
-
-    def get_short_description(self, obj):
-        return obj.description[:50]
-```
-
-
-Here, we-
-
-- Explicitly defined the fields the serializer has access to via the `fields` attribute
-- Set the `completed` field to `read-only`
-- Added additional data -- `short_description`
-
-### Implement Non Primary Key Based CRUD Operations
 
 `serializers.py`
 
 ```python
+from rest_framework import serializers
+from .models import Category
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = '__all__'
-
-class ProductSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Product
-        fields = '__all__'
 ```
 
-Non Primary Key Based CRUD Operations involves getting lists, creating new objects.
+
+`views.py`
+
+1. Non-Primary Key Based CRUD Operations involving getting lists, creating new objects.
 
 ```python
-class CategoryListView(APIView):
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
+from .models import Category
+from .serializers import CategorySerializer
+
+
+class CategoryList(APIView):
     def get(self, request):
         categories = Category.objects.all()
-        serializer = CategorySerializer(categories, many=True, context={'request': request})
+        serializer = CategorySerializer(categories, many=True)
         return Response(serializer.data)
 
     def post(self, request):
@@ -147,32 +125,19 @@ class CategoryListView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 ```
 
-```python
-urlpatterns = [
-    path('categories/', CategoryListView.as_view(), name='category-list'),
-    path('products/', ProductListView.as_view(), name='product-list'),
-]
-```
+2. Primary Key Based CRUD Operations involving getting a single object, updating an object, and deleting an object.
 
-### Implement Primary Key Based CRUD Operations
 
 ```python
-urlpatterns = [
-    # ...
-    path('categories/<int:pk>/', CategoryDetailView.as_view(), name='category-detail'),
-    path('products/<int:pk>/', ProductDetailView.as_view(), name='product-detail'),
-    path('products/<int:product_id>/reviews/', ProductReviewsView.as_view(), name='product-reviews'),
-    path('products/<int:product_id>/reviews/<int:review_id>/', ProductReviewsView.as_view(), name='review-detail'),
-]
-```
-
-```python
-class CategoryDetailView(APIView):
+from django.shortcuts import get_object_or_404
+# ...
+class CategoryDetail(APIView):
     def get(self, request, pk):
         category = get_object_or_404(Category, pk=pk)
-        serializer = CategorySerializer(category, context={'request': request})
+        serializer = CategorySerializer(category)
         return Response(serializer.data)
 
     def put(self, request, pk):
@@ -188,78 +153,50 @@ class CategoryDetailView(APIView):
         category.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class ProductDetailView(APIView):
-    def get(self, request, pk):
-        product = get_object_or_404(Product, pk=pk)
-        serializer = ProductSerializer(product)
-        return Response(serializer.data)
-
-    def put(self, request, pk):
-        product = get_object_or_404(Product, pk=pk)
-        serializer = ProductSerializer(product, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk):
-        product = get_object_or_404(Product, pk=pk)
-        product.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-class ProductReviewsView(APIView):
-
-    def get(self, request, product_id, review_id=None):
-        product = Product.objects.get(pk=product_id)
-
-        if review_id:
-            review = Review.objects.get(pk=review_id, product=product)
-            serializer = ReviewSerializer(review)
-            return Response(serializer.data)
-
-        reviews = Review.objects.filter(product=product)
-        serializer = ReviewSerializer(reviews, many=True)
-        return Response(serializer.data)
-
-    def post(self, request, product_id):
-        product = Product.objects.get(pk=product_id)
-        serializer = ReviewSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(product=product)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def put(self, request, product_id, review_id):
-        product = Product.objects.get(pk=product_id)
-        review = Review.objects.get(pk=review_id, product=product)
-        serializer = ReviewSerializer(review, data=request.data)
-        if serializer.is_valid():
-            serializer.save(product=product)
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, product_id, review_id):
-        product = Product.objects.get(pk=product_id)
-        review = Review.objects.get(pk=review_id, product=product)
-        review.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 ```
+
+`app/urls.py`
+
+```python
+from django.urls import path
+from .views import CategoryList, CategoryDetail
+
+urlpatterns = [
+    # registering non-primary key based CRUD operations
+    path('categories/', CategoryList.as_view(), name='category-list'),
+    # registering primary key based CRUD operations
+    path('categories/<int:pk>/', CategoryDetail.as_view(), name='category-detail')
+]
+```
+
+`config/urls.py`
+
+```python
+from django.urls import path, include
+
+urlpatterns = [
+    path('api/', include('app.urls')),
+]
+```
+
 
 ## Mixin in DRF
 
-DRF provides a number of built-in generic class-based views that can be used to abstract common actions. These views are called `Mixins`. Additionally, in the UI, you can use the `GenericAPIView` class to create a custom view.
-The HTML forms and the API endpoints are tightly coupled. So, you can use the same view to render HTML forms and to handle API requests.
+DRF provides a number of built-in generic class-based views that can be used to abstract common actions. These views are called `Mixins`.
+
+The `GenericAPIView` also give HTML forms for the API endpoints.
+
 
 ### Mixin for List and Create (non primary key based CRUD)
 
 ```python
 # v1
-# class CategoryListView(APIView):
+# class CategoryList(APIView):
 #     def get(self, request):
 #         categories = Category.objects.all()
-#         serializer = CategorySerializer(categories, many=True, context={'request': request})
+#         serializer = CategorySerializer(categories, many=True)
 #         return Response(serializer.data)
-#
+
 #     def post(self, request):
 #         serializer = CategorySerializer(data=request.data)
 #         if serializer.is_valid():
@@ -268,38 +205,12 @@ The HTML forms and the API endpoints are tightly coupled. So, you can use the sa
 #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # v2
+from rest_framework import mixins, generics
 class CategoryListView(mixins.ListModelMixin,
                        mixins.CreateModelMixin,
                        generics.GenericAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-
-    def get(self, request):
-        return self.list(request)
-
-    def post(self, request):
-        return self.create(request)
-
-# v1
-# class ProductListView(APIView):
-#     def get(self, request):
-#         products = Product.objects.all()
-#         serializer = ProductSerializer(products, many=True, context={'request': request})
-#         return Response(serializer.data)
-#
-#     def post(self, request):
-#         serializer = ProductSerializer(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-# v2
-class ProductListView(mixins.ListModelMixin,
-                      mixins.CreateModelMixin,
-                      generics.GenericAPIView):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
 
     def get(self, request):
         return self.list(request)
@@ -347,44 +258,694 @@ class CategoryDetailView(mixins.RetrieveModelMixin,
         return self.destroy(request, pk)
 ```
 
+
+
+
+## Concrete View
+
+The If you're using generic views this is normally the level you'll be working at unless you need heavily customized behavior.
+The view classes can be imported from `rest_framework.generics`.
+
+- ListAPIView
+- CreateAPIView
+- RetrieveAPIView
+- UpdateAPIView
+- DestroyAPIView
+- ListCreateAPIView
+- RetrieveUpdateAPIView
+- RetrieveDestroyAPIView
+- RetrieveUpdateDestroyAPIView
+
+
+### For List and Create (non primary key based CRUD)
+
+```python
+from rest_framework import generics
+class CategoryList(generics.ListCreateAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+```
+
+### For Retrieve, Update and Destroy (primary key based CRUD)
+
+```python
+class CategoryDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+```
+
+## ViewSets
+
+### ModelViewSets and Router
+
+ModelViewSet provides default create, retrieve, update, partial_update, destroy and list actions since it uses `GenericViewSet` and all of the available mixins.
+
+
+- [https://testdriven.io/blog/drf-views-part-3/#modelviewset](https://testdriven.io/blog/drf-views-part-3/#modelviewset)
+
+
+```python
+from .serializers import CategorySerializer
+from .models import Category
+
+# class CategoryListView(generics.ListCreateAPIView):
+#     queryset = Category.objects.all()
+#     serializer_class = CategorySerializer
+
+# class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
+#     queryset = Category.objects.all()
+#     serializer_class = CategorySerializer
+
+from rest_framework import viewsets
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+```
+
+ViewSets come with a router class that automatically generates the URL configurations.
+
+DRF comes with two routers out-of-the-box:
+
+- DefaultRouter
+- SimpleRouter
+
+The main difference between them is that `DefaultRouter` includes a default API root view:
+
+Defining the router:
+
+```python
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import CategoryViewSet
+
+# urlpatterns = [
+#     path('categories/', CategoryList.as_view(), name='category-list'),
+#     path('categories/<int:pk>/', CategoryDetail.as_view(), name='category-detail')
+# ]
+
+router = DefaultRouter()
+router.register("categories", CategoryViewSet)
+
+urlpatterns = [
+    path("", include(router.urls)),
+]
+
+```
+
+Now at root level `http://127.0.0.1:8000/api/`, we can api root view.
+
+```json
+{
+    "categories": "http://127.0.0.1:8000/api/categories/"
+}
+```
+
+## Pagination, search and filtering
+
+### Pagination
+
+- [https://www.django-rest-framework.org/api-guide/pagination/](https://www.django-rest-framework.org/api-guide/pagination/)
+
+#### Global Pagination
+
+The pagination style may be set globally, using the `DEFAULT_PAGINATION_CLASS` and `PAGE_SIZE` setting keys. For example, to use the built-in limit/offset pagination, you would do something like this:
+
+```python
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 5
+}
+```
+
+#### Custom pagination on an individual view
+
+If you want to modify particular aspects of the pagination style, you'll want to override one of the pagination classes, and set the attributes that you want to change.
+
+```python
+from rest_framework.pagination import PageNumberPagination
+class CategoryCustomPagination(PageNumberPagination):
+    page_size = 3
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    pagination_class = CategoryCustomPagination
+```
+
+### Filtering
+
+- [https://www.django-rest-framework.org/api-guide/filtering/](https://www.django-rest-framework.org/api-guide/filtering/)
+
+The `django-filter` library includes a `DjangoFilterBackend` class which supports highly customizable field filtering for REST framework.
+
+To use `DjangoFilterBackend`, first install django-filter.
+
+```bash
+pipenv install django-filter
+```
+
+Then add 'django_filters' to Django's INSTALLED_APPS:
+
+```python
+INSTALLED_APPS = [
+    ...
+    'django_filters',
+    ...
+]
+```
+
+You should now either add the filter backend to your settings:
+
+```python
+REST_FRAMEWORK = {
+    # ...
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
+}
+```
+
+Or add the filter backend to an individual View or ViewSet.
+
+
+```python
+from django_filters.rest_framework import DjangoFilterBackend
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    ...
+    filter_backends = [DjangoFilterBackend]
+```
+
+If all you need is simple equality-based filtering, you can set a `filterset_fields` attribute on the view, or viewset, listing the set of fields you wish to filter against.
+
+`views.py`
+
+```python
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    pagination_class = CategoryCustomPagination
+    filterset_fields = ['name']
+```
+
+### Searching
+
+- [https://www.django-rest-framework.org/api-guide/filtering/#searchfilter](https://www.django-rest-framework.org/api-guide/filtering/#searchfilter)
+
+The `SearchFilter` class from `rest_framework` supports simple single query parameter based searching, and is based on the Django admin's search functionality.
+
+
+```python
+from rest_framework import filters
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    pagination_class = CategoryCustomPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['name']
+    # filter_backends = [filters.SearchFilter]
+    search_fields = ['name']
+```
+
+The search behavior may be specified by prefixing field names in `search_fields` with one of the following characters (which is equivalent to adding `__<lookup>` to the field):
+
+- `^` Starts-with search.
+- `=` Exact matches.
+- `@` Full-text search.
+- `$` Regex search.
+
+```python
+search_fields = ['=username', '=email']
+```
+
+### Sorting
+
+- [https://www.django-rest-framework.org/api-guide/filtering/#orderingfilter](https://www.django-rest-framework.org/api-guide/filtering/#orderingfilter)
+
+```python
+class CategoryViewSet(viewsets.ModelViewSet):
+    # ....
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['name']
+    search_fields = ['name']
+    ordering_fields = ['name']
+```
+
+If an `ordering` attribute is set on the view, this will be used as the default ordering.
+
+```python
+class CategoryViewSet(viewsets.ModelViewSet):
+    # ....
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['name']
+    search_fields = ['name']
+    ordering_fields = ['name']
+    ordering = ['-id']
+```
+
+
+
+
+## More on  Serializer
+
+### Changing output of the serializer
+
+Two of the most useful functions inside the BaseSerializer class that we can override are to_representation() and `to_internal_value()`. By overriding them, we can change the serialization and deserialization behavior, respectively, to append additional data, extract data, and handle relationships.
+
+- `to_representation()` allows us to change the serialization output - convert response to JSON.
+- `to_internal_value()` allows us to change the deserialization output
+
+More - [https://testdriven.io/blog/drf-serializers/#custom-outputs](https://testdriven.io/blog/drf-serializers/#custom-outputs)
+
+Example of changing the output of the serializer:
+
+```python
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        response = super().to_representation(instance)
+        response['tags_count'] = instance.tags.count()
+        return response
+```
+
+output:
+
+```json
+ {
+    "id": 4,
+    "name": "iPhone 15",
+    "tags_count": 2
+},
+```
+
+Example of changing the input of the serializer:
+
+Suppose instead of making `POST` request below data format:
+
+```python
+{
+  "name": "X",
+  "category":2,
+  "tags":[1,2]
+}
+
+we make the request like this:
+
+```json
+{
+  "data":{
+    "name": "X",
+    "category":2,
+    "tags":[1,2]
+  }
+}
+```
+
+So in `to_internal_value` method we need to extract the `data` key from the request data.
+
+```python
+class ProductSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Product
+        fields = '__all__'
+
+    def to_internal_value(self, data):
+        main_data = data['data']
+        return super().to_internal_value(main_data)
+```
+
+### Nested Serializer
+
+`models.py`
+
+```python
+class Category(models.Model):
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name
+
+class Tag(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+
+    def __str__(self):
+        return self.name
+
+class Product(models.Model):
+    name = models.CharField(max_length=255)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
+    tags = models.ManyToManyField(Tag, related_name='products')
+
+    def __str__(self):
+        return self.name
+
+```
+
+
+`serializers.py`
+
+```python
+from rest_framework import serializers
+from .models import Product, Category
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = '__all__'
+```
+
+
+Here 1 Category can have many products. But default the response will be like this:
+
+```json
+GET api/categories/
+{
+    "id": 1,
+    "name": "Laptops"
+}
+
+GET api/products/
+{
+    "id": 1,
+    "name": "HP envy x360",
+    "category": 1
+}
+```
+
+So, the relations fields are represented as primary keys for `many-to-one` side and not even represented for `one-to-many` or `many-to-many` side.
+
+1. Populating `one-to-many` is simple, just use the `related_name` value, `products` in the case and define as a property with corresponding serializer class.
+
+```python
+class CategorySerializer(serializers.ModelSerializer):
+    products = ProductSerializer(many=True)
+
+    class Meta:
+        model = Category
+        fields = '__all__'
+```
+
+Here is the new response:
+
+```json
+GET api/categories/
+{
+    "id": 1,
+    "name": "Laptops",
+    "products": [
+        {
+            "id": 1,
+            "name": "HP envy x360",
+            "category": 1
+        },
+        {
+            "id": 2,
+            "name": "Dell XPS 13",
+            "category": 1
+        }
+        // ....
+    ]
+}
+```
+
+2. Populating `many-to-one`:
+
+As we've seen the category foreign filed in the product model is represented as a primary key.  To ge the whole category object, we need to define a property with the corresponding serializer class.
+
+```python
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    category = CategorySerializer()
+
+    class Meta:
+        model = Product
+        fields = '__all__'
+```
+
+```json
+{
+    "id": 1,
+    "category": {
+        "id": 1,
+        "name": "Laptops"
+    },
+    "name": "HP envy x360"
+}
+```
+
+**But this will brake the `POST` request**.
+
+One option is to override `to_representation` method in the `ProductSerializer` class, in the many side.
+We can override the `to_representation` function of the serializer to change the output of the serializer,
+
+
+
+```python
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        response = super().to_representation(instance)
+        response['category'] = CategorySerializer(instance.category).data
+        return response
+```
+
+- [https://stackoverflow.com/questions/29950956/drf-simple-foreign-key-assignment-with-nested-serializers](https://stackoverflow.com/questions/29950956/drf-simple-foreign-key-assignment-with-nested-serializers)
+
+
+3. Populating `many-to-many` side, with out breaking `POST` method is also to override the `to_representation` method.
+
+
+`models.py`
+
+```python
+class Product(models.Model):
+    name = models.CharField(max_length=255)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
+    tags = models.ManyToManyField(Tag, related_name='products', blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+```
+
+`serializers.py`
+
+```python
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'
+
+
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = '__all__'
+
+
+class ProductSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Product
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        response = super().to_representation(instance)
+        response['category'] = CategorySerializer(instance.category).data
+        response['tags'] = TagSerializer(instance.tags, many=True).data
+
+        return response
+```
+
+Example of making `POST` request with json data.
+
+```json
+POST api/products/
+{
+    "name": "HP envy x360",
+    "category": 1,
+    "tags": [1, 2]
+}
+```
+
+4. `depth` option:
+
+```python
+class ProductSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Product
+        fields = '__all__'
+        depth = 1
+
+    # def to_representation(self, instance):
+    #     response = super().to_representation(instance)
+    #     response['category'] = CategorySerializer(instance.category).data
+    #     response['tags'] = TagSerializer(instance.tags, many=True).data
+    #     return response
+```
+
+But `POST` request will break.
+
+
+4. Still, choosing nested serializer is a trade of between `one-to-many` and `many-to-one` relationships. Both can't be achieved at the same time because of circular dependency of the serializer classes.
+
+There's also built-in Serializer relations like `PrimaryKeyRelatedField`, `HyperlinkedRelatedField`, `SlugRelatedField`, `HyperlinkedIdentityField`.
+
+- [doc#relations](https://www.django-rest-framework.org/api-guide/relations/)
+
+Note that **reverse relationships** are not automatically included by the `ModelSerializer` and `HyperlinkedModelSerializer` classes. To include a reverse relationship, you must explicitly add it to the fields list. For example:
+
+
+```python
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'products']
+        # fields = '__all__' will not include the reverse relationship, the `related_name` should be used.
+
+
+class TagSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Tag
+        fields = ['id', 'name', 'products']
+        # fields = '__all__' will not include the reverse relationship, the `related_name` should be used.
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    # category = CategoryField(queryset=Category.objects.all())
+    # tags = TagField(many=True, queryset=Tag.objects.all())
+
+    class Meta:
+        model = Product
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        response = super().to_representation(instance)
+        response['category'] = CategorySerializer(instance.category).data
+        response['tags'] = TagSerializer(instance.tags, many=True).data
+
+        return response
+```
+
+You'll normally want to ensure that you've set an appropriate `related_name` argument,`products`,  on the relationship, that you can use as the field name explicitly instead of `__all__`.
+
+
+
+- [doc#reverse-relations](https://www.django-rest-framework.org/api-guide/relations/#reverse-relations)
+
+
+
+
+## Customizing the ModelViewSet
+
+```python
+class ProductReviewsViewSet(viewsets.ModelViewSet):
+    serializer_class = ReviewSerializer
+
+    def get_queryset(self):
+        product_id = self.kwargs.get('product_id')
+        if self.kwargs.get('review_id'):
+            return Review.objects.filter(pk=self.kwargs['review_id'], product__pk=product_id)
+        return Review.objects.filter(product__pk=product_id)
+
+    def perform_create(self, serializer):
+        product_id = self.kwargs.get('product_id')
+        product = Product.objects.get(pk=product_id)
+        serializer.save(product=product)
+
+    def perform_update(self, serializer):
+        product_id = self.kwargs.get('product_id')
+        product = Product.objects.get(pk=product_id)
+        serializer.save(product=product)
+
+    def perform_destroy(self, instance):
+        instance.delete()
+```
+
+```python
+# ...
+router.register(r'products/(?P<product_id>.*)/reviews', views.ProductReviewsViewSet, basename='product-reviews')
+urlpatterns = [
+    path("", include(router.urls)),
+    # path('products/<int:product_id>/reviews/', views.ProductReviewsView.as_view(), name='product-reviews'),
+    # path('products/<int:product_id>/reviews/<int:review_id>/', views.ProductReviewsView.as_view(), name='review-detail'),
+]
+```
+
+## Multiple route parameters
+
+```python
+urlpatterns = [
+    path('products/<int:product_id>/reviews/', ProductReviewsView.as_view(), name='product-reviews'),
+    path('products/<int:product_id>/reviews/<int:review_id>/', ProductReviewsView.as_view(), name='review-detail'),
+]
+```
+
+```python
+
+
+class ProductReviewsView(APIView):
+
+    def get(self, request, product_id, review_id=None):
+        product = Product.objects.get(pk=product_id)
+
+        if review_id:
+            review = Review.objects.get(pk=review_id, product=product)
+            serializer = ReviewSerializer(review)
+            return Response(serializer.data)
+
+        reviews = Review.objects.filter(product=product)
+        serializer = ReviewSerializer(reviews, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, product_id):
+        product = Product.objects.get(pk=product_id)
+        serializer = ReviewSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(product=product)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, product_id, review_id):
+        product = Product.objects.get(pk=product_id)
+        review = Review.objects.get(pk=review_id, product=product)
+        serializer = ReviewSerializer(review, data=request.data)
+        if serializer.is_valid():
+            serializer.save(product=product)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, product_id, review_id):
+        product = Product.objects.get(pk=product_id)
+        review = Review.objects.get(pk=review_id, product=product)
+        review.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+```
+
+mixin
+
 For complex route pattern, we have to customize the `queryset`.
 
 ```python
-# class ProductReviewsView(APIView):#     def get(self, request, product_id, review_id=None):
-#         product = Product.objects.get(pk=product_id)
-
-#         if review_id:
-#             review = Review.objects.get(pk=review_id, product=product)
-#             serializer = ReviewSerializer(review)
-#             return Response(serializer.data)
-
-#         reviews = Review.objects.filter(product=product)
-#         serializer = ReviewSerializer(reviews, many=True)
-#         return Response(serializer.data)
-
-#     def post(self, request, product_id):
-#         product = Product.objects.get(pk=product_id)
-#         serializer = ReviewSerializer(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save(product=product)
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#     def put(self, request, product_id, review_id):
-#         product = Product.objects.get(pk=product_id)
-#         review = Review.objects.get(pk=review_id, product=product)
-#         serializer = ReviewSerializer(review, data=request.data)
-#         if serializer.is_valid():
-#             serializer.save(product=product)
-#             return Response(serializer.data)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#     def delete(self, request, product_id, review_id):
-#         product = Product.objects.get(pk=product_id)
-#         review = Review.objects.get(pk=review_id, product=product)
-#         review.delete()
-#         return Response(status=status.HTTP_204_NO_CONTENT)
-
 # v2
 class ProductReviewsView(mixins.ListModelMixin,
                          mixins.CreateModelMixin,
@@ -428,190 +989,6 @@ class ProductReviewsView(mixins.ListModelMixin,
             return Response(status=status.HTTP_204_NO_CONTENT)
 ```
 
-
-## Concrete View
-
-- [https://www.django-rest-framework.org/api-guide/generic-views/#concrete-view-classes](https://www.django-rest-framework.org/api-guide/generic-views/#concrete-view-classes)
-
-### For List and Create (non primary key based CRUD)
-
-```python
-
-# class CategoryListView(APIView):
-#     def get(self, request):
-#         categories = Category.objects.all()
-#         serializer = CategorySerializer(categories, many=True, context={'request': request})
-#         return Response(serializer.data)
-
-#     def post(self, request):
-#         serializer = CategorySerializer(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-# v2
-# class CategoryListView(mixins.ListModelMixin,
-#                        mixins.CreateModelMixin,
-#                        generics.GenericAPIView):
-#     queryset = Category.objects.all()
-#     serializer_class = CategorySerializer
-
-#     def get(self, request):
-#         return self.list(request)
-
-#     def post(self, request):
-#         return self.create(request)
-
-# v3
-
-class CategoryListView(generics.ListCreateAPIView):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
-```
-
-### For Retrieve, Update and Destroy (primary key based CRUD)
-
-```python
-# class ProductDetailView(APIView):
-#     def get(self, request, pk):
-#         product = get_object_or_404(Product, pk=pk)
-#         serializer = ProductSerializer(product)
-#         return Response(serializer.data)
-
-#     def put(self, request, pk):
-#         product = get_object_or_404(Product, pk=pk)
-#         serializer = ProductSerializer(product, data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#     def delete(self, request, pk):
-#         product = get_object_or_404(Product, pk=pk)
-#         product.delete()
-#         return Response(status=status.HTTP_204_NO_CONTENT)
-
-# v2
-
-# class ProductDetailView(mixins.RetrieveModelMixin,
-#                         mixins.UpdateModelMixin,
-#                         mixins.DestroyModelMixin,
-#                         generics.GenericAPIView):
-#     queryset = Product.objects.all()
-#     serializer_class = ProductSerializer
-
-#     def get(self, request, *args, **kwargs):
-#         return self.retrieve(request, *args, **kwargs)
-
-#     def put(self, request, *args, **kwargs):
-#         return self.update(request, *args, **kwargs)
-
-#     def delete(self, request, *args, **kwargs):
-#         return self.destroy(request, *args, **kwargs)
-
-class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
-```
-
-## ViewSet
-
-### ModelViewSet
-
-- [https://testdriven.io/blog/drf-views-part-3/#modelviewset](https://testdriven.io/blog/drf-views-part-3/#modelviewset)
-
-ModelViewSet provides default create, retrieve, update, partial_update, destroy and list actions since it uses GenericViewSet and all of the available mixins.
-
-```python
-# class CategoryListView(generics.ListCreateAPIView):
-#     queryset = Category.objects.all()
-#     serializer_class = CategorySerializer
-
-# class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
-#     queryset = Category.objects.all()
-#     serializer_class = CategorySerializer
-
-class CategoryViewSet(viewsets.ModelViewSet):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
-
-
-# class ProductListView(generics.ListCreateAPIView):
-#     queryset = Product.objects.all()
-#     serializer_class = ProductSerializer
-
-# class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
-#     queryset = Product.objects.all()
-#     serializer_class = ProductSerializer
-
-class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
-```
-
-ViewSets come with a router class that automatically generates the URL configurations.
-
-DRF comes with two routers out-of-the-box:
-
-- DefaultRouter
-- SimpleRouter
-
-The main difference between them is that `DefaultRouter` includes a default API root view:
-
-Defining the router:
-
-```python
-from . import views
-from rest_framework.routers import DefaultRouter
-router = DefaultRouter()
-router.register(r'products', views.ProductViewSet)
-router.register(r'categories',  views.CategoryViewSet)
-
-urlpatterns = [
-    # path('categories/', views.CategoryListView.as_view(), name='category-list'),
-    # path('products/', views.ProductListView.as_view(), name='product-list'),
-    # path('categories/<int:pk>/', views.CategoryDetailView.as_view(), name='category-detail'),
-    # path('products/<int:pk>/', views.ProductDetailView.as_view(), name='product-detail'),
-    path("", include(router.urls)),
-]
-```
-
-#### Customizing the ModelViewSet
-
-```python
-class ProductReviewsViewSet(viewsets.ModelViewSet):
-    serializer_class = ReviewSerializer
-
-    def get_queryset(self):
-        product_id = self.kwargs.get('product_id')
-        if self.kwargs.get('review_id'):
-            return Review.objects.filter(pk=self.kwargs['review_id'], product__pk=product_id)
-        return Review.objects.filter(product__pk=product_id)
-
-    def perform_create(self, serializer):
-        product_id = self.kwargs.get('product_id')
-        product = Product.objects.get(pk=product_id)
-        serializer.save(product=product)
-
-    def perform_update(self, serializer):
-        product_id = self.kwargs.get('product_id')
-        product = Product.objects.get(pk=product_id)
-        serializer.save(product=product)
-
-    def perform_destroy(self, instance):
-        instance.delete()
-```
-
-```python
-# ...
-router.register(r'products/(?P<product_id>.*)/reviews', views.ProductReviewsViewSet, basename='product-reviews')
-urlpatterns = [
-    path("", include(router.urls)),
-    # path('products/<int:product_id>/reviews/', views.ProductReviewsView.as_view(), name='product-reviews'),
-    # path('products/<int:product_id>/reviews/<int:review_id>/', views.ProductReviewsView.as_view(), name='review-detail'),
-]
-```
 
 ## Token Authentication
 
