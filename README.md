@@ -4,6 +4,7 @@
   - [Setup](#setup)
     - [Crating Virtual Environment with `venv`](#crating-virtual-environment-with-venv)
     - [Crating Virtual Environment with `pipenv`](#crating-virtual-environment-with-pipenv)
+    - [Setup with `uv`](#setup-with-uv)
   - [Django commands](#django-commands)
   - [Deploy django on "Render"](#deploy-django-on-render)
 
@@ -52,6 +53,23 @@ python manage.py makemigrations
 python manage.py migrate
 python manage.py runserver
 ```
+
+### Setup with `uv`
+
+```bash
+uv init
+uv add django
+
+# start django project with `uv run`
+uv run django-admin startproject config .
+uv run manage.py migrate
+uv run manage.py runserver
+
+uv add --dev pytest pytest-django
+# https://docs.astral.sh/uv/pip/compile/#locking-requirements
+uv pip compile pyproject.toml -o requirements.txt
+```
+
 
 ## Django commands
 
