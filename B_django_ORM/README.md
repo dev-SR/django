@@ -33,6 +33,7 @@
     - [a many-to-many query using objects](#a-many-to-many-query-using-objects)
   - [Annotations and Grouping](#annotations-and-grouping)
   - [Transaction Management](#transaction-management)
+  - [Seeding Example](#seeding-example)
 
 ## Database configuration
 
@@ -1192,3 +1193,299 @@ except ValueError as e:
     print(f"Order creation failed: {e}")
 
 ```
+
+
+## Seeding Example
+
+
+Models:
+
+```python
+import uuid
+from django.db import models
+from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
+
+
+# User Profile with One-to-One Relationship
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    phone_number = models.CharField(max_length=15)
+    address = models.TextField()
+
+    def __str__(self):
+        return f"{self.user.username}'s Profile"
+
+
+# Product Model
+class Product(models.Model):
+    id = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False, unique=True
+    )
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    category = models.ForeignKey(
+        "Category", on_delete=models.CASCADE, related_name="products"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        INACTIVE = "inactive", "Inactive"
+
+    status = models.CharField(
+        max_length=10, choices=Status.choices, default=Status.ACTIVE
+    )
+
+    def __str__(self):
+        return self.name
+
+
+# Order Model with Many-to-One Relationship
+class Order(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SHIPPED = "shipped", "Shipped"
+        DELIVERED = "delivered", "Delivered"
+        CANCELLED = "cancelled", "Cancelled"
+
+    id = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False, unique=True
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders")
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING
+    )
+    shipping_address = models.TextField()
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Order {self.id} by {self.user.username} ({self.status})"
+
+    def calculate_total_price(self):
+        total = sum(item.total_price() for item in self.order_items.all())
+        self.total_price = total
+        self.save()
+
+    def get_ordered_products(self):
+        return [(item.product.name, item.quantity) for item in self.order_items.all()]
+
+
+# OrderProduct Model (Through Model for Many-to-One Relationship)
+class OrderProduct(models.Model):
+    order = models.ForeignKey(
+        Order, on_delete=models.CASCADE, related_name="order_items"
+    )
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+
+    def __str__(self):
+        return f"Order {self.order.id} - {self.product.name} x {self.quantity}"
+
+    def total_price(self):
+        return self.product.price * self.quantity
+
+
+# Cart Model
+class Cart(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        ABANDONED = "abandoned", "Abandoned"
+
+    id = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False, unique=True
+    )
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="cart")
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.ACTIVE
+    )
+
+    def __str__(self):
+        return f"{self.user.username}'s Cart"
+
+    def calculate_total_price(self):
+        return sum(item.total_price() for item in self.cart_products.all())
+
+
+# CartProduct Model (Through Model for Many-to-Many Relationship)
+class CartProduct(models.Model):
+    cart = models.ForeignKey(
+        Cart, on_delete=models.CASCADE, related_name="cart_products"
+    )
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+
+    def __str__(self):
+        return f"{self.cart.user.username} - {self.product.name} x {self.quantity}"
+
+    def total_price(self):
+        return self.product.price * self.quantity
+
+
+# Category Model with Self-Referential Relationship
+class Category(models.Model):
+    id = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False, unique=True
+    )
+    name = models.CharField(max_length=100)
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="subcategories",
+    )
+
+    def __str__(self):
+        return self.name if not self.parent else f"{self.parent} -> {self.name}"
+
+
+# Review Model with Generic Relationship
+class Review(models.Model):
+    id = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False, unique=True
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reviews")
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.UUIDField()
+    content_object = GenericForeignKey()
+    text = models.TextField()
+    rating = models.PositiveIntegerField()
+
+    def __str__(self):
+        return f"Review by {self.user.username} ({self.rating}/5)"
+```
+
+Seeding: `app\scripts\seed.py`
+
+```python
+from faker import Faker
+import faker_commerce
+from django.contrib.auth.models import User
+from ..models import Category,OrderProduct,Product,Order,Cart,CartProduct,Review,ContentType,UserProfile,
+import random
+
+
+def run():
+    fake = Faker()
+    fake.add_provider(faker_commerce.Provider)
+
+    # Seed Categories and Products
+    print("Deleting old data....")
+    users = User.objects.exclude(username="adminme")
+    # Delete all users except adminme
+    for user in users:
+        user.delete()
+    Category.objects.all().delete()
+    Product.objects.all().delete()
+    Order.objects.all().delete()
+    OrderProduct.objects.all().delete()
+    Cart.objects.all().delete()
+    CartProduct.objects.all().delete()
+    Review.objects.all().delete()
+
+    # print("Populating new data.....")
+
+    # Seed Categories
+    categories_data = [
+        {"name": "Electronics"},
+        {"name": "Smartphones"},
+        {"name": "Laptops"},
+        {"name": "Home Appliances"},
+    ]
+    for cat in categories_data:
+        Category.objects.create(**cat)
+
+    cat1 = Category.objects.get(name="Electronics")
+    cat2 = Category.objects.get(name="Smartphones")
+    cat2.parent = cat1
+    cat2.save()
+
+    categories = Category.objects.all()
+
+    # Seed Products
+    for _ in range(10):
+        try:
+            product = Product()
+            product.name = fake.ecommerce_name()
+            product.description = fake.sentence(nb_words=20)
+            product.price = fake.random_int(min=100, max=1000)  # Safe range for price
+            product.status = fake.random.choice(
+                [Product.Status.ACTIVE, Product.Status.INACTIVE]
+            )
+            product.category = random.choice(categories)  # Adding random category
+            product.save()
+            print(f"Saved Product: {product.name}")
+        except Exception as e:
+            print(f"Error saving product: {e}")
+
+    # Seed Users
+    print("Seeding Users...")
+    for _ in range(5):  # Create 20 users
+        user = User.objects.create_user(
+            username=fake.user_name(), email=fake.email(), password="password123"
+        )
+        UserProfile.objects.create(
+            user=user, phone_number=fake.phone_number(), address=fake.address()
+        )
+        print(f"Created User: {user.username}")
+
+    # Seeding Orders
+    # Seeding Orders
+    print("Seeding Orders...")
+    for _ in range(3):  # Create 3 orders
+        user = random.choice(User.objects.all())
+        order = Order.objects.create(
+            user=user,
+            status=random.choice([Order.Status.PENDING, Order.Status.SHIPPED]),
+        )
+
+        # Add products to the order
+        for _ in range(random.randint(1, 5)):
+            product = random.choice(Product.objects.all())
+            quantity = random.randint(1, 3)  # Random quantity between 1 and 3
+            OrderProduct.objects.create(order=order, product=product, quantity=quantity)
+
+        # Calculate total price for the order
+        order.calculate_total_price()
+        print(f"Created Order {order.id} for User {user.username}")
+
+    # Seeding Carts
+    print("Seeding Carts...")
+    for user in User.objects.all():
+        cart = Cart.objects.create(
+            user=user, status=random.choice([Cart.Status.ACTIVE, Cart.Status.ABANDONED])
+        )
+
+        # Add products to the cart
+        for _ in range(random.randint(1, 5)):
+            product = random.choice(Product.objects.all())
+            quantity = random.randint(1, 3)  # Random quantity between 1 and 3
+            CartProduct.objects.create(cart=cart, product=product, quantity=quantity)
+
+        print(f"Created Cart for User {user.username}")
+
+    # Seeding Reviews
+    print("Seeding Reviews...")
+    for product in Product.objects.all():
+        for _ in range(random.randint(1, 3)):
+            user = random.choice(User.objects.all())
+            Review.objects.create(
+                user=user,
+                content_type=ContentType.objects.get_for_model(
+                    Product
+                ),  # Link review to Product
+                object_id=product.id,
+                text=fake.sentence(nb_words=20),
+                rating=fake.random_int(1, 5),
+            )
+            print(f"Created Review for Product {product.name} by {user.username}")
+
+    print("Seeding complete!")
+```
+
