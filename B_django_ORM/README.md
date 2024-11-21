@@ -23,12 +23,14 @@
     - [Deferring Fields](#deferring-fields)
   - [CRUD operations with Relationships](#crud-operations-with-relationships)
     - [Creating records for a one-to-many relation](#creating-records-for-a-one-to-many-relation)
-      - [Creating records with many-to-many relationships](#creating-records-with-many-to-many-relationships)
-      - [Querying using foreign keys | get many side of one-to-many relation](#querying-using-foreign-keys--get-many-side-of-one-to-many-relation)
-      - [Querying using the model name | get one side of one-to-many relation](#querying-using-the-model-name--get-one-side-of-one-to-many-relation)
-      - [Querying across foreign key relationships using the object instance](#querying-across-foreign-key-relationships-using-the-object-instance)
-      - [querying across a many-to-many relationship using the field lookup](#querying-across-a-many-to-many-relationship-using-the-field-lookup)
-      - [a many-to-many query using objects](#a-many-to-many-query-using-objects)
+    - [Creating records with many-to-many relationships](#creating-records-with-many-to-many-relationships)
+    - [Querying Related objects | one-to-many + many-to-one relation](#querying-related-objects--one-to-many--many-to-one-relation)
+      - [Forward | the `One` side of one-to-many relation](#forward--the-one-side-of-one-to-many-relation)
+        - [Optimizing Forward access to one-to-many relationships](#optimizing-forward-access-to-one-to-many-relationships)
+      - [Backward | the `One` side of one-to-many relation](#backward--the-one-side-of-one-to-many-relation)
+      - [Optimizing Backward access to one-to-many relationships](#optimizing-backward-access-to-one-to-many-relationships)
+    - [querying across a many-to-many relationship using the field lookup](#querying-across-a-many-to-many-relationship-using-the-field-lookup)
+    - [a many-to-many query using objects](#a-many-to-many-query-using-objects)
   - [Annotations and Grouping](#annotations-and-grouping)
   - [Transaction Management](#transaction-management)
 
@@ -186,7 +188,7 @@ class Product(models.Model):
 ```bash
 python manage.py makemigrations
 python manage.py migrate
-# in case of "no changes detected" error run:
+# in case of "no changes detected" error, make sure models are in `models.py` and app is registered in `INSTALLED_APP` or run explicitly:
 python manage.py makemigrations name
 ```
 
@@ -249,7 +251,7 @@ class Product(models.Model):
     #...
 
 class Review(models.Model):
-    product = models.ForeignKey("Product", on_delete=models.CASCADE, related_name='reviews')
+    product = models.ForeignKey("Product", on_delete=models.CASCADE)
     body = models.TextField()
     rating = models.IntegerField()
 ```
@@ -309,7 +311,7 @@ But in Django, we don't need to create a third table. We can create a many-to-ma
 ```python
 class Product(models.Model):
     #...
-    tags = models.ManyToManyField("Tag", related_name='products')
+    tags = models.ManyToManyField("Tag")
 
 class Tag(models.Model):
     name = models.CharField(max_length=200)
@@ -324,16 +326,16 @@ Also, we can create a many-to-many relationship with an intermediate model. For 
 class Product(models.Model):
     title = models.CharField(max_length=200, unique=True)
     attributes = models.ManyToManyField(
-        "Attribute", related_name="products", through="ProductAttribute")
+        "Attribute", through="ProductAttribute")
 
 class Attribute(models.Model):
     name = models.CharField(max_length=200, unique=True)
 
 class ProductAttribute(models.Model):
     product = models.ForeignKey(
-        "Product", on_delete=models.CASCADE, related_name="product_attributes")
+        "Product", on_delete=models.CASCADE)
     attribute = models.ForeignKey(
-        "Attribute", on_delete=models.CASCADE, related_name="product_attributes")
+        "Attribute", on_delete=models.CASCADE)
 ```
 
 Downside to this approach is that we need extra efforts in creating and managing the intermediate model. Additionally, we need to configure the ability to add attributes from product admin page with `admin.StackedInline` or `admin.TabularInline`.Which in case of the many-to-many relationship without an intermediate model is done automatically - i.e. Tag can be added to Product from Product admin page by default.
@@ -800,7 +802,7 @@ reviews_instances = [Review(product=product, **review_data)
 Review.objects.bulk_create(reviews_instances)
 ```
 
-#### Creating records with many-to-many relationships
+### Creating records with many-to-many relationships
 
 Updating a ManyToManyField works a little differently – use the `add()` or `set()` methods to create relationships:
 
@@ -881,216 +883,139 @@ for product_attribute in product.product_attributes.all():
     print(f"Attribute: {product_attribute.attribute}, Value: {product_attribute.value}")
 ```
 
-#### Querying using foreign keys | get many side of one-to-many relation
+### Querying Related objects | one-to-many + many-to-one relation
 
-When we have relationships across two models/tables, Django provides a way to perform a query using the relationship.
+- [https://docs.djangoproject.com/en/5.1/topics/db/queries/#related-objects](https://docs.djangoproject.com/en/5.1/topics/db/queries/#related-objects)
 
-Similar to what we’ve seen previously, this is done using the double-underscore lookup. For example, the `Product` model has a foreign key of `category` pointing to the `Category` model.
-
-```python
-class Category (models.Model):
-    name = models.CharField(max_length=250, unique=True)
-
-class Product(models.Model):
-    title = models.CharField(max_length=200, unique=True)
-    category = models.ForeignKey(
-        "Category", on_delete=models.CASCADE, related_name="products")
-```
-
-Using this foreign key, we can perform a query **using double underscores and the name field in the `Category` model**. This can be seen from the following code:
+When you define relationships in Django models, such as `ForeignKey` (many-to-one), `OneToOneField`, or `ManyToManyField`, Django provides an intuitive API for accessing related objects.
 
 ```python
-category1_products = Product.objects.filter(category__name="Smartphone")
-print(category1_products) # <QuerySet [<Product: Product 1>, <Product: Product 2>], ...>
-
-# SELECT "product"."*"
-#   FROM "product"
-#  INNER JOIN "category"
-#     ON ("product"."category_id" = "category"."id")
-#  WHERE "category"."name" = '''Smartphone'''
-
-category1_products = Product.objects.filter(category__pk=1)
-print(category1_products) # <QuerySet [<Product: Product 1>, <Product: Product 2>], ...>
-```
-
-#### Querying using the model name | get one side of one-to-many relation
-
-Another way of querying is using a relationship to do the query backward, using the model name in lowercase. For example we can query the `Product` model using the `Category` model as follows:
-
-```python
-Category.objects.get(products__id=1)
-# <Category: Smartphone>
-```
-
-#### Querying across foreign key relationships using the object instance
-
-We can also retrieve the information using the object’s foreign key. Suppose we want to query the category name for the  the product 1.
-
-```python
-product = Product.objects.get(id=1)
-print(product.category)
-```
-
-But beware this will trigger a new database query.
-
-```sql
-SELECT "product"."*", "product"."category_id" -- let's say cat_id 3 is returned
-FROM "product"
-WHERE "product"."id" = '1'
-
-SELECT *
-FROM "category"
-WHERE "category"."id" = '3' -- second query is made with cat_id 3 to get the category
-```
-
-To avoid this, we can use the `select_related()` method to retrieve the information using the object’s foreign key. select_related is used to perform SQL **join** and retrieve related objects in a single query. It’s **most effective** when you have a `ForeignKey` or a `OneToOneField` in your model.
-
-```python
-product = Product.objects.select_related("category").get(id=1)
-print(product.category)
-```
-
-```sql
-SELECT "product"."*"
-  FROM "product"
- INNER JOIN "category"
-    ON ("product"."category_id" = "category"."id")
- WHERE "product"."id" = '1'
-```
-
-Similarly, we use the reverse direction to get all the product information for a category using `
-
-```python
-category = Category.objects.get(pk=5)
-print(category.products.all())
-```
-
-Although there is no 'products' field in the `Category` model, Django will automatically create one using the name of the model with the suffix `_set`, but since we have specified a `related_name`, Django will use that instead.
-
-Again this `category.products.all()` will trigger a new database query.
-
-```sql
-SELECT *
-  FROM "category"
- WHERE "category"."id" = '5'
-
-SELECT "product"."*"
-  FROM "product"
-    WHERE "product"."category_id" = '5'
-```
-
-To avoid this, we can use the `prefetch_related()` method to retrieve the information using the object’s foreign key. `prefetch_related` is used when optimizing queries with `many-to-many` and `reverse` foreign key relationships. It performs **two separate queries**, one for the main object and one for the related objects.
-
-```python
-category = Category.objects.prefetch_related("products").get(pk=5)
-print(category.products.all())
-```
-
-Unlike `selected_related`, `prefetch_related` performs two separate queries, one for the main object and one for the related objects.
-
-```sql
-SELECT *
-  FROM "category"
- WHERE "category"."id" = '5'
-
-SELECT "product"."*"
-  FROM "product"
-    WHERE "product"."category_id" IN ('5')
-```
-
-This may seems similar to making queries without `prefetch_related`, but the difference is that `prefetch_related` will make the second query using the `IN` statement, which is more efficient than making a separate query for each object.
-
-The real benefit of `prefetch_related` is revealed when we have a `many-to-many` relationship. or when we have a `reverse` foreign key relationship. For example, consider the following models:
-
-```python
-categories = Category.objects.prefetch_related('products').all()
-for category in categories:
-    print(category.products.all())
-```
-
-```sql
-SELECT *
-  FROM "category"
-
-SELECT "product"."*"
-  FROM "product"
-    WHERE "product"."category_id" IN ('5', '6', '7')
-```
-
-As we can see, prefetch is implemented using the `IN` statement. In this way, when there are too many objects in QuerySet, performance problems may arise depending on the characteristics of the database.
-
-In short, `select_related` is used when optimizing queries with `ForeignKey` and `OneToOneField` relationships, and `prefetch_related` is used when optimizing queries with `ManyToManyField` and `reverse` foreign key relationships.
-
-
-```python
-class ModelA(models.Model):
-    pass
-
-class ModelB(models.Model):
-    fk = models.ForeignKey(ModelA, on_delete=models.CASCADE, related_names="modB")
-
-# Forward ForeignKey relationship
-ModelB.objects.select_related('fk').all()
-
-# Reverse ForeignKey relationship
-ModelA.objects.prefetch_related('modB').all()
-```
-
-
-Here is an example combining two:
-
-```python
-class Product(models.Model):
-    title = models.CharField(max_length=200, unique=True)
-
-class Customer(models.Model):
-    name = models.CharField(max_length=200)
-
 class Order(models.Model):
-    customer = models.ForeignKey(
-        "Customer", on_delete=models.CASCADE, related_name="orders")
-
-class OrderItem(models.Model):
-    order = models.ForeignKey(
-        "Order", on_delete=models.CASCADE, related_name="order_items")
-    product = models.ForeignKey(
-        "Product", on_delete=models.CASCADE, related_name="order_items")
-    quantity = models.IntegerField(default=0)
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 ```
+
+Above defines relation: **One User has Many Orders**, and like SQL table ForeignKey is present in the Many side of the table/model.
+
+#### Forward | the `One` side of one-to-many relation
+
+If a model (Order) has a `ForeignKey`, instances of that model(order) will have access to the related (foreign) object (User) via an attribute (user) of the model.
 
 ```python
-q = Order.objects.select_related('customer')
-                 .prefetch_related('order_items__product')
-                 .filter(customer__name='Jhon')
-for order in q:
-    for item in order.order_items.all():
-        print(f"{order.customer.name} | {item.product.title} | {item.quantity}")
+order = Order.objects.last()
+print(order.user)
 ```
+
+In this query we `order` instance has the `foreignkey` attribute `user` therefore we got the related user of the last order.
+
+update to the relation can be made similarly using same approach by calling `save()`:
+
+```python
+order = Order.objects.last()
+order.user = new_user
+# or
+order.user= None # If ForeignKey field has null=True set (i.e., it allows NULL values),
+user.save() # update relation
+```
+
+
+##### Optimizing Forward access to one-to-many relationships
+
+```python
+order = Order.objects.last()
+order.user
+```
+
+This query make two sql queries, one to fetch the last order and another to fetch the user associated with the last order
+
+<p align="center">
+<img src="img/select_related.jpg" alt="select_related.jpg" width="500px"/>
+</p>
+
+This can be optimized with the `select_related()` QuerySet method that recursively prepopulates the cache of all one-to-many relationships ahead of time.
+
+```typescript
+order = Order.objects.select_related().last()
+order.user
+```
+
+Now only one SQL query is needed to fetch the last order and the user associated with the last order. This is done by joining the two tables in a single query.
+
+<p align="center">
+<img src="img/select_related1.jpg" alt="select_related1.jpg" width="500px"/>
+</p>
+
 
 ```sql
-SELECT "order"."order_id",...
+SELECT **
   FROM "order"
- INNER JOIN "customer"
-    ON ("order"."customer_id" = "customer"."id")
- WHERE "customer"."name" = '''Jhon'''
-
-SELECT "orderitem"."product_id",...
-  FROM "orderitem"
- WHERE "orderitem"."order_id" IN ('1')
-
-SELECT "product"."*"
-  FROM "product"
- WHERE "product"."id" IN ('81', '83', '99')
+ INNER JOIN "auth_user"
+    ON ("order"."user_id" = "auth_user"."id")
+ ORDER BY "order"."id" DESC
+ LIMIT 1
 ```
 
-More:
+#### Backward | the `One` side of one-to-many relation
 
-- [medium.com /optimizing-django-queries-with-select-related-and-prefetch-related](https://medium.com/@baradiyasatish/optimizing-django-queries-with-select-related-and-prefetch-related-22ee02015f72#:~:text=prefetch_related%20is%20used%20when%20optimizing,the%20N%2B1%20query%20problem.)
-- [https://www.geeksforgeeks.org/prefetch_related-and-select_related-functions-in-django/](https://www.geeksforgeeks.org/prefetch_related-and-select_related-functions-in-django/)
+```python
+class Order(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+```
+
+In our model definition "`User`" model does has reference to the `Order` model; so how we can Access all `Order` instances for a `User`? In this case, a `User` instance gets a `Manager` that allows you to retrieve all the `Order` instances related to that `User`.
+
+By default, this `Manager` is named `<model>_set`, where `<model>` is the source model name, lowercased
+
+```python
+user = User.objects.last()
+user.order_set.all()
+```
+
+In our example, we get all the orders for the last user with `order_set` manager where `order` is the source model name, lowercased of `Order` model.
+
+You can override the `<model>_set` name by setting the `related_name` parameter in the `ForeignKey` definition. For example, if the `Order` try model was altered to `user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders")`:
+
+```python
+class Order(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders")
+```
+
+The query would look like this:
+
+```python
+user = User.objects.last()
+user.orders.all()
+```
+
+#### Optimizing Backward access to one-to-many relationships
+
+Let sat we have `N` number of `User`. In case we want to get all the order of these `N` users,there will be `N+1` SQL queries made,query for each users separately, severely degrading the performance of the application.
+
+```python
+    users = User.objects.exclude(username="adminme")
+    for user in users:
+        for order in user.orders.all():
+            print(order)
+```
+
+<p align="center">
+<img src="img/prefetch_related.jpg" alt="prefetch_related.jpg " width="500px"/>
+</p>
+
+This can be optimized with the `prefetch_related()`; Returns a QuerySet that will automatically retrieve, in a single batch, related objects for each of the specified lookups.
+
+```python
+users = User.objects.prefetch_related("orders").exclude(username="adminme")
+for user in users:
+    for order in user.orders.all():
+        print(order)
+```
+
+<p align="center">
+<img src="img/prefetch_related2.jpg" alt="prefetch_related2.jpg " width="500px"/>
+</p>
 
 
-#### querying across a many-to-many relationship using the field lookup
+### querying across a many-to-many relationship using the field lookup
 
 ```python
 class Product(models.Model):
@@ -1146,7 +1071,7 @@ print(product1_tags)
 #  WHERE "product_tags"."product_id" = '99'
 ```
 
-#### a many-to-many query using objects
+### a many-to-many query using objects
 
 
 ```python
