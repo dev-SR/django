@@ -33,6 +33,9 @@
     - [a many-to-many query using objects](#a-many-to-many-query-using-objects)
   - [Annotations and Grouping](#annotations-and-grouping)
   - [Transaction Management](#transaction-management)
+  - [SubQuery](#subquery)
+    - [Introduction to subqueries](#introduction-to-subqueries)
+    - [Implementing subqueries in python:](#implementing-subqueries-in-python)
   - [Seeding Example](#seeding-example)
 
 ## Database configuration
@@ -1192,6 +1195,158 @@ try:
 except ValueError as e:
     print(f"Order creation failed: {e}")
 
+```
+
+## SubQuery
+
+### Introduction to subqueries
+
+A subquery is a query nested within another query. It is used to perform a secondary query that provides a value or set of values to the outer query. It is often used in the `WHERE`, `HAVING`, or `FROM` clauses of a statement. Subqueries are commonly used with `SELECT`, `UPDATE`, `INSERT`, and `DELETE` statements to achieve complex filtering and data manipulation.
+
+- [https://www.w3resource.com/sql/subqueries/understanding-sql-subqueries.php](https://www.w3resource.com/sql/subqueries/understanding-sql-subqueries.php)
+
+A subquery can be located in :
+- In the `SELECT` Clause : Used to return a single value or a set of values.
+
+    ```sql
+    SELECT first_name, 
+        (SELECT department_name 
+            FROM departments 
+            WHERE departments.department_id = employees.department_id) 
+        AS department_name
+    FROM employees;
+    ```
+    
+    - Here, for each employee in the `employees` table, the subquery finds the matching `department_name` from the `departments` table based on the `department_id`. This result is shown alongside the employee's name.
+
+
+- In the `WHERE` Clause : Used to filter the subquery results.
+
+    ```sql
+    SELECT first_name
+    FROM employees
+    WHERE department_id IN (SELECT department_id FROM departments WHERE location_id>1500);
+    ```
+
+    - The subquery fetches all `department_id`s from the `departments` table where the `location_id` is greater than 1500. The main query then retrieves the `first_name` of employees who belong to any of these departments.
+
+- In the `HAVING` Clause : Used to filter groups.
+
+    ```sql
+    SELECT department_id, AVG(salary)
+    FROM employees
+    GROUP BY department_id
+    HAVING AVG(salary) > (SELECT AVG(salary) FROM employees);
+    ```
+    
+    - The subquery calculates the average salary of all employees. The main query groups employees by `department_id` and calculates the average salary for each department, returning only those departments where the average salary exceeds the overall average salary.
+
+
+
+- In the `FROM` Clause : Treated as a derived table or inline view.
+
+    ```sql
+    SELECT *
+    FROM (SELECT first_name, salary FROM employees WHERE salary > 5000) AS "high_salaried"
+    ```
+   -The subquery creates a temporary result set of employees who earn more than 5000. The main query then selects all columns from this temporary result set (alias `"high_salaried"`).
+
+
+---
+
+### Implementing subqueries in python:
+
+> Example: Fetching the Latest Order for Each User
+
+
+```python
+from django.db.models import Subquery, OuterRef, Max
+from .models import User, Order
+
+# Subquery to get the latest order date for each user
+latest_order_date = (
+    Order.objects.filter(
+        user=OuterRef("id")
+    )  # OuterRef('id') refers to the id field of the user in the outer query. This is used inside the subquery to filter Order objects by the user field.
+    .order_by("-created_at")
+    .values("created_at")[:1]
+)
+
+# Fetch users along with their latest order date
+users_with_latest_order = User.objects.annotate(
+    latest_order_date=Subquery(latest_order_date)
+)
+
+for user in users_with_latest_order:
+    print(f"User: {user.username}, Latest Order Date: {user.latest_order_date}")
+```
+
+```sql
+SELECT "user".*
+       (
+        SELECT o."created_at"
+          FROM "order" o
+         WHERE o."user_id" = ("user"."id")
+         ORDER BY o."created_at" DESC
+         LIMIT 1
+       ) AS "latest_order_date"
+  FROM "user"
+```
+
+---
+
+> Example: Fetching the Latest Order for Each User
+
+
+```python
+# Get the ContentType for the Product model
+product_content_type = ContentType.objects.get_for_model(Product)
+
+# Subquery to calculate the average rating for each product
+average_rating = (
+    Review.objects.filter(
+        content_type=product_content_type,  # Filter reviews for Product
+        object_id=OuterRef("id"),  # Match product ID with review's object_id
+    )
+    .values("object_id")
+    .annotate(avg_rating=Avg("rating"))
+    .values("avg_rating")
+)
+
+# Annotate products with their average rating
+products_with_avg_rating = Product.objects.annotate(
+    avg_rating=Subquery(average_rating)
+)
+
+# Fetch products with average rating > 4
+top_rated_products = products_with_avg_rating.filter(avg_rating__gt=4)
+
+for product in top_rated_products:
+    print(f"Product: {product.name}, Average Rating: {product.avg_rating}")
+```
+
+```sql
+SELECT "product"."id",
+       "product"."name",
+       "product"."description",
+       "product"."price",
+       "product"."category_id",
+       "product"."created_at",
+       "product"."updated_at",
+       "product"."status",
+       (
+        SELECT AVG(r."rating") AS "avg_rating"
+          FROM "review" r
+         WHERE (r."content_type_id" = 1 AND r."object_id" = ("product"."id"))
+         GROUP BY r."object_id"
+       ) AS "avg_rating"
+  FROM "product"
+ WHERE (
+        SELECT AVG(r."rating") AS "avg_rating"
+          FROM "review" r
+         WHERE (r."content_type_id" = 1 AND r."object_id" = ("product"."id"))
+         GROUP BY r."object_id"
+       ) > 4.0
 ```
 
 
