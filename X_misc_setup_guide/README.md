@@ -10,6 +10,8 @@
     - [admin\_generator](#admin_generator)
     - [RunScript](#runscript)
   - [Faker Lib](#faker-lib)
+  - [Rest Framework Setup](#rest-framework-setup)
+    - [Required Installations](#required-installations)
 
 
 ## Setup Templates
@@ -192,5 +194,17 @@ def run():
         tags = fake.random_choices(["new", "just_arrival", "old", "classic"], length=2)
         print(f"{title} price: {price}, status: {stats} tags: {tags}")
 ```
+
+## Rest Framework Setup
+
+### Required Installations
+
+```bash
+uv add django djangorestframework django-filter
+# start django project
+uv run django-admin startproject config .
+```
+
+
 
 
