@@ -2,8 +2,8 @@
 
 - [Django Rest API](#django-rest-api)
   - [Rest Framework Setup](#rest-framework-setup)
-    - [env with `django-environ`](#env-with-django-environ)
     - [Required Installations](#required-installations)
+    - [env with `django-environ`](#env-with-django-environ)
     - [drf-spectacular](#drf-spectacular)
     - [`django-silk` for Profiling and Optimization](#django-silk-for-profiling-and-optimization)
     - [Exception Handling](#exception-handling)
@@ -55,29 +55,12 @@
 
 ## Rest Framework Setup
 
-
-### env with `django-environ`
-
-```bash
-uv add django-environ
-```
-
-```python
-from pathlib import Path
-BASE_DIR = Path(__file__).resolve().parent.parent
-import environ
-env = environ.Env()
-environ.Env.read_env(env_file=BASE_DIR / ".env", overwrite=True)
-SECRET_KEY = env("SECRET_KEY")
-DEBUG = env("DEBUG", cast=bool, default=True)
-```
-
 ### Required Installations
 
 1. Step1 : Installations
 
 ```bash
-uv add django django-extensions djangorestframework django-filter
+uv add django django-extensions djangorestframework django-filter django-environ
 # start django project
 uv run django-admin startproject config .
 uv run manage.py migrate
@@ -111,6 +94,22 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", TestApiView.as_view()),
 ]
+```
+
+### env with `django-environ`
+
+```bash
+uv add django-environ
+```
+
+```python
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent
+import environ
+env = environ.Env()
+environ.Env.read_env(env_file=BASE_DIR / ".env", overwrite=True)
+SECRET_KEY = env("SECRET_KEY")
+DEBUG = env("DEBUG", cast=bool, default=True)
 ```
 
 ### drf-spectacular 
